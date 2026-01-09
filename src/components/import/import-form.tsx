@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Upload, FileJson, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
+import { Upload, FileText, Loader2, CheckCircle, AlertCircle, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -28,32 +28,23 @@ interface ImportFormProps {
   categories: Category[];
 }
 
-interface MidjourneyJob {
-  id: string;
-  prompt: string;
-  full_command?: string;
-  timestamp?: string;
-  image_paths?: string[];
-  reference_job_id?: string;
-  event_type?: string;
-}
-
 interface ImportResult {
   success: number;
   failed: number;
+  skipped: number;
   errors: string[];
 }
 
 export function ImportForm({ categories }: ImportFormProps) {
   const router = useRouter();
   const [isImporting, setIsImporting] = useState(false);
-  const [jsonInput, setJsonInput] = useState('');
+  const [textInput, setTextInput] = useState('');
   const [defaultCategoryId, setDefaultCategoryId] = useState<string>('');
   const [result, setResult] = useState<ImportResult | null>(null);
 
   const parsePromptFromCommand = (fullCommand: string): { prompt: string; parameters: string } => {
     // Remove /imagine prompt: prefix if present
-    let prompt = fullCommand.replace(/^\/imagine\s+prompt:\s*/i, '');
+    let prompt = fullCommand.replace(/^\/imagine\s+prompt:\s*/i, '').trim();
 
     // Extract parameters (--ar, --v, --style, etc.)
     const paramMatch = prompt.match(/(--[\w\s:.]+)+$/);
@@ -75,33 +66,21 @@ export function ImportForm({ categories }: ImportFormProps) {
     return title.charAt(0).toUpperCase() + title.slice(1);
   };
 
-  const importMidjourneyData = async (jobs: MidjourneyJob[]) => {
+  const importPrompts = async (prompts: string[]) => {
     setIsImporting(true);
     setResult(null);
 
-    const results: ImportResult = { success: 0, failed: 0, errors: [] };
+    const results: ImportResult = { success: 0, failed: 0, skipped: 0, errors: [] };
 
-    // Filter to only imagine jobs (not upscales, variations, etc.)
-    const imagineJobs = jobs.filter(
-      (job) => !job.event_type || job.event_type === 'imagine'
-    );
+    // Filter and deduplicate
+    const uniquePrompts = [...new Set(prompts.map(p => p.trim()).filter(p => p.length > 5))];
 
-    // Group by prompt to avoid duplicates
-    const uniquePrompts = new Map<string, MidjourneyJob>();
-    for (const job of imagineJobs) {
-      const promptText = job.full_command || job.prompt;
-      if (promptText && !uniquePrompts.has(promptText)) {
-        uniquePrompts.set(promptText, job);
-      }
-    }
-
-    for (const [, job] of uniquePrompts) {
+    for (const promptText of uniquePrompts) {
       try {
-        const promptText = job.full_command || job.prompt;
         const { prompt, parameters } = parsePromptFromCommand(promptText);
 
         if (!prompt || prompt.length < 3) {
-          results.failed++;
+          results.skipped++;
           continue;
         }
 
@@ -115,19 +94,19 @@ export function ImportForm({ categories }: ImportFormProps) {
             title,
             base_prompt: prompt,
             category_id: defaultCategoryId || null,
-            tags: ['midjourney', 'imported'],
+            tags: ['imported'],
           }),
         });
 
         if (!promptResponse.ok) {
           results.failed++;
-          results.errors.push(`Failed to import: ${title.substring(0, 30)}...`);
+          results.errors.push(`Failed: ${title.substring(0, 30)}...`);
           continue;
         }
 
         const createdPrompt = await promptResponse.json();
 
-        // Create Midjourney variant with parameters
+        // Create Midjourney variant if there are parameters
         if (parameters) {
           await fetch(`/api/prompts/${createdPrompt.id}/variants`, {
             method: 'POST',
@@ -136,7 +115,7 @@ export function ImportForm({ categories }: ImportFormProps) {
               platform: 'midjourney',
               optimized_prompt: prompt,
               parameters: { raw: parameters },
-              notes: `Imported from Midjourney on ${new Date().toLocaleDateString()}`,
+              notes: `Imported on ${new Date().toLocaleDateString()}`,
             }),
           });
         }
@@ -144,7 +123,7 @@ export function ImportForm({ categories }: ImportFormProps) {
         results.success++;
       } catch (error) {
         results.failed++;
-        results.errors.push(`Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        results.errors.push(`Error: ${error instanceof Error ? error.message : 'Unknown'}`);
       }
     }
 
@@ -152,46 +131,65 @@ export function ImportForm({ categories }: ImportFormProps) {
     setIsImporting(false);
 
     if (results.success > 0) {
-      toast.success(`Successfully imported ${results.success} prompts`);
-    }
-    if (results.failed > 0) {
-      toast.error(`Failed to import ${results.failed} prompts`);
+      toast.success(`Imported ${results.success} prompts`);
     }
   };
 
-  const handleJsonImport = async () => {
+  const handleTextImport = async () => {
+    // Split by newlines, handle various formats
+    const lines = textInput
+      .split(/\n/)
+      .map(line => line.trim())
+      .filter(line => line.length > 0);
+
+    if (lines.length === 0) {
+      toast.error('No prompts found');
+      return;
+    }
+
+    await importPrompts(lines);
+  };
+
+  const handleCsvImport = async () => {
     try {
-      const data = JSON.parse(jsonInput);
+      // Try to parse as CSV (from Notion or other sources)
+      const lines = textInput.split(/\n/).filter(line => line.trim());
 
-      // Handle different JSON formats
-      let jobs: MidjourneyJob[] = [];
-
-      if (Array.isArray(data)) {
-        jobs = data;
-      } else if (data.jobs && Array.isArray(data.jobs)) {
-        jobs = data.jobs;
-      } else if (data.prompts && Array.isArray(data.prompts)) {
-        // Simple format: { prompts: ["prompt1", "prompt2"] }
-        jobs = data.prompts.map((p: string, i: number) => ({
-          id: `import-${i}`,
-          prompt: p,
-        }));
-      } else {
-        throw new Error('Unrecognized JSON format');
-      }
-
-      if (jobs.length === 0) {
-        toast.error('No prompts found in the JSON data');
+      if (lines.length === 0) {
+        toast.error('No data found');
         return;
       }
 
-      await importMidjourneyData(jobs);
-    } catch (error) {
-      if (error instanceof SyntaxError) {
-        toast.error('Invalid JSON format. Please check your input.');
-      } else {
-        toast.error(error instanceof Error ? error.message : 'Import failed');
+      // Check if first line is a header
+      const firstLine = lines[0].toLowerCase();
+      const hasHeader = firstLine.includes('prompt') || firstLine.includes('name') || firstLine.includes('title');
+
+      const dataLines = hasHeader ? lines.slice(1) : lines;
+      const prompts: string[] = [];
+
+      for (const line of dataLines) {
+        // Handle CSV with quotes
+        const match = line.match(/"([^"]+)"/);
+        if (match) {
+          prompts.push(match[1]);
+        } else {
+          // Try comma-separated, take the longest field (likely the prompt)
+          const fields = line.split(',').map(f => f.trim());
+          const longestField = fields.reduce((a, b) => a.length > b.length ? a : b, '');
+          if (longestField.length > 10) {
+            prompts.push(longestField);
+          }
+        }
       }
+
+      if (prompts.length === 0) {
+        toast.error('Could not parse any prompts from CSV');
+        return;
+      }
+
+      await importPrompts(prompts);
+    } catch {
+      toast.error('Failed to parse CSV');
     }
   };
 
@@ -201,7 +199,7 @@ export function ImportForm({ categories }: ImportFormProps) {
 
     try {
       const text = await file.text();
-      setJsonInput(text);
+      setTextInput(text);
       toast.success(`Loaded ${file.name}`);
     } catch {
       toast.error('Failed to read file');
@@ -210,172 +208,37 @@ export function ImportForm({ categories }: ImportFormProps) {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="midjourney" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="midjourney">Midjourney</TabsTrigger>
-          <TabsTrigger value="json">JSON / CSV</TabsTrigger>
+      <Tabs defaultValue="text" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="text">Plain Text</TabsTrigger>
+          <TabsTrigger value="gallery">From Gallery</TabsTrigger>
+          <TabsTrigger value="csv">CSV / Notion</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="midjourney" className="space-y-4">
+        {/* Plain Text Import */}
+        <TabsContent value="text" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Import from Midjourney</CardTitle>
+              <CardTitle>Import from Text</CardTitle>
               <CardDescription>
-                Export your Midjourney history and paste the JSON here
+                Paste your prompts, one per line
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="rounded-lg border border-border bg-muted/50 p-4">
-                <h4 className="font-medium mb-2">How to export from Midjourney:</h4>
-                <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
-                  <li>Go to <a href="https://www.midjourney.com/archive" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">midjourney.com/archive</a></li>
-                  <li>Sign in with your Discord account</li>
-                  <li>Click on <strong>Settings</strong> (gear icon) in the top right</li>
-                  <li>Scroll down to <strong>Request Data Export</strong></li>
-                  <li>Wait for the email with your data download link</li>
-                  <li>Download and unzip the archive</li>
-                  <li>Find the <code className="bg-muted px-1 rounded">prompts.json</code> file</li>
-                  <li>Upload it below or paste the contents</li>
-                </ol>
-              </div>
-
-              {/* Default Category */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Default Category (optional)</label>
-                <Select value={defaultCategoryId} onValueChange={setDefaultCategoryId}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="No category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">No category</SelectItem>
-                    {categories.map((cat) => (
-                      <SelectItem key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* File Upload */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Upload JSON file</label>
-                <div className="flex items-center gap-2">
-                  <label className="flex-1">
-                    <div className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-6 transition-colors hover:border-primary hover:bg-muted/50">
-                      <Upload className="h-5 w-5 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">
-                        Drop your prompts.json here or click to browse
-                      </span>
-                    </div>
-                    <input
-                      type="file"
-                      accept=".json"
-                      onChange={handleFileUpload}
-                      className="hidden"
-                    />
-                  </label>
-                </div>
-              </div>
-
-              {/* JSON Input */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Or paste JSON data</label>
-                <Textarea
-                  value={jsonInput}
-                  onChange={(e) => setJsonInput(e.target.value)}
-                  placeholder='[{"prompt": "a beautiful sunset...", "full_command": "/imagine prompt: a beautiful sunset --ar 16:9"}]'
-                  className="min-h-[200px] font-mono text-sm"
-                />
-              </div>
-
-              {/* Import Button */}
-              <Button
-                onClick={handleJsonImport}
-                disabled={isImporting || !jsonInput.trim()}
-                className="w-full"
-              >
-                {isImporting ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Importing...
-                  </>
-                ) : (
-                  <>
-                    <FileJson className="mr-2 h-4 w-4" />
-                    Import Prompts
-                  </>
-                )}
-              </Button>
-
-              {/* Results */}
-              {result && (
-                <div className="space-y-2 rounded-lg border p-4">
-                  <div className="flex items-center gap-2">
-                    {result.success > 0 && (
-                      <div className="flex items-center gap-1 text-green-500">
-                        <CheckCircle className="h-4 w-4" />
-                        <span>{result.success} imported</span>
-                      </div>
-                    )}
-                    {result.failed > 0 && (
-                      <div className="flex items-center gap-1 text-destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <span>{result.failed} failed</span>
-                      </div>
-                    )}
-                  </div>
-                  {result.errors.length > 0 && (
-                    <ul className="text-sm text-muted-foreground">
-                      {result.errors.slice(0, 5).map((err, i) => (
-                        <li key={i}>{err}</li>
-                      ))}
-                      {result.errors.length > 5 && (
-                        <li>...and {result.errors.length - 5} more errors</li>
-                      )}
-                    </ul>
-                  )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => router.push('/')}
-                  >
-                    View Imported Prompts
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="json" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Import from JSON</CardTitle>
-              <CardDescription>
-                Import prompts from a custom JSON format
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="rounded-lg border border-border bg-muted/50 p-4">
-                <h4 className="font-medium mb-2">Supported formats:</h4>
+                <h4 className="font-medium mb-2">Format:</h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  One prompt per line. Parameters like <code className="bg-background px-1 rounded">--ar 16:9</code> will be automatically extracted.
+                </p>
                 <pre className="text-xs bg-background p-2 rounded overflow-x-auto">
-{`// Array of prompts
-[
-  { "prompt": "your prompt text", "full_command": "optional full command" },
-  { "prompt": "another prompt" }
-]
-
-// Simple list
-{ "prompts": ["prompt 1", "prompt 2", "prompt 3"] }
-
-// With jobs wrapper
-{ "jobs": [{ "prompt": "...", "timestamp": "..." }] }`}
+{`a beautiful sunset over mountains --ar 16:9 --v 6
+portrait of a woman, soft lighting, studio photo
+/imagine prompt: cyberpunk city at night --ar 21:9`}
                 </pre>
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Default Category (optional)</label>
+                <label className="text-sm font-medium">Default Category</label>
                 <Select value={defaultCategoryId} onValueChange={setDefaultCategoryId}>
                   <SelectTrigger>
                     <SelectValue placeholder="No category" />
@@ -392,15 +255,15 @@ export function ImportForm({ categories }: ImportFormProps) {
               </div>
 
               <Textarea
-                value={jsonInput}
-                onChange={(e) => setJsonInput(e.target.value)}
-                placeholder="Paste your JSON here..."
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Paste your prompts here, one per line..."
                 className="min-h-[200px] font-mono text-sm"
               />
 
               <Button
-                onClick={handleJsonImport}
-                disabled={isImporting || !jsonInput.trim()}
+                onClick={handleTextImport}
+                disabled={isImporting || !textInput.trim()}
                 className="w-full"
               >
                 {isImporting ? (
@@ -410,15 +273,222 @@ export function ImportForm({ categories }: ImportFormProps) {
                   </>
                 ) : (
                   <>
-                    <FileJson className="mr-2 h-4 w-4" />
+                    <FileText className="mr-2 h-4 w-4" />
                     Import Prompts
                   </>
                 )}
               </Button>
+
+              <ResultDisplay result={result} onViewPrompts={() => router.push('/')} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* Gallery Copy Instructions */}
+        <TabsContent value="gallery" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Copy from Midjourney Gallery</CardTitle>
+              <CardDescription>
+                Manually copy prompts from your Midjourney gallery
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border border-border bg-muted/50 p-4">
+                <h4 className="font-medium mb-2">How to copy from Midjourney:</h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                  <li>Go to <a href="https://www.midjourney.com/imagine" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">midjourney.com/imagine</a></li>
+                  <li>Sign in and go to your gallery</li>
+                  <li>Click on an image to open it</li>
+                  <li>Click the <strong>Copy</strong> button (or <kbd className="px-1.5 py-0.5 bg-background rounded border text-xs">...</kbd> → Copy → Prompt)</li>
+                  <li>Paste the prompt below</li>
+                  <li>Repeat for each prompt you want to import</li>
+                </ol>
+              </div>
+
+              <div className="rounded-lg border border-amber-500/50 bg-amber-500/10 p-4">
+                <h4 className="font-medium mb-2 text-amber-500">Tip: Use Prompt Hunter Extension</h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Install the <a href="https://chromewebstore.google.com/detail/midjourney-prompt-hunter/bjdnhgolddapgkagnbhnnaaoejjnhfgc" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Midjourney Prompt Hunter</a> Chrome extension to bulk capture prompts to Notion, then export as CSV.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Default Category</label>
+                <Select value={defaultCategoryId} onValueChange={setDefaultCategoryId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No category</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Paste copied prompts here (one per line)..."
+                className="min-h-[200px] font-mono text-sm"
+              />
+
+              <Button
+                onClick={handleTextImport}
+                disabled={isImporting || !textInput.trim()}
+                className="w-full"
+              >
+                {isImporting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Import Prompts
+                  </>
+                )}
+              </Button>
+
+              <ResultDisplay result={result} onViewPrompts={() => router.push('/')} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* CSV / Notion Import */}
+        <TabsContent value="csv" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Import from CSV / Notion</CardTitle>
+              <CardDescription>
+                Import from Notion export or any CSV file
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="rounded-lg border border-border bg-muted/50 p-4">
+                <h4 className="font-medium mb-2">How to export from Notion:</h4>
+                <ol className="list-decimal list-inside space-y-2 text-sm text-muted-foreground">
+                  <li>Open your Notion database with prompts</li>
+                  <li>Click <strong>...</strong> (three dots) in the top right</li>
+                  <li>Select <strong>Export</strong></li>
+                  <li>Choose <strong>CSV</strong> format</li>
+                  <li>Upload the file below or paste the contents</li>
+                </ol>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Upload CSV file</label>
+                <label className="block">
+                  <div className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-border p-6 transition-colors hover:border-primary hover:bg-muted/50">
+                    <Upload className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Drop your CSV file here or click to browse
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    accept=".csv,.txt"
+                    onChange={handleFileUpload}
+                    className="hidden"
+                  />
+                </label>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Default Category</label>
+                <Select value={defaultCategoryId} onValueChange={setDefaultCategoryId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="No category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No category</SelectItem>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Textarea
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                placeholder="Paste CSV data here..."
+                className="min-h-[200px] font-mono text-sm"
+              />
+
+              <Button
+                onClick={handleCsvImport}
+                disabled={isImporting || !textInput.trim()}
+                className="w-full"
+              >
+                {isImporting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Importing...
+                  </>
+                ) : (
+                  <>
+                    <FileText className="mr-2 h-4 w-4" />
+                    Import from CSV
+                  </>
+                )}
+              </Button>
+
+              <ResultDisplay result={result} onViewPrompts={() => router.push('/')} />
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+function ResultDisplay({ result, onViewPrompts }: { result: ImportResult | null; onViewPrompts: () => void }) {
+  if (!result) return null;
+
+  return (
+    <div className="space-y-2 rounded-lg border p-4">
+      <div className="flex items-center gap-4">
+        {result.success > 0 && (
+          <div className="flex items-center gap-1 text-green-500">
+            <CheckCircle className="h-4 w-4" />
+            <span>{result.success} imported</span>
+          </div>
+        )}
+        {result.skipped > 0 && (
+          <div className="flex items-center gap-1 text-muted-foreground">
+            <span>{result.skipped} skipped</span>
+          </div>
+        )}
+        {result.failed > 0 && (
+          <div className="flex items-center gap-1 text-destructive">
+            <AlertCircle className="h-4 w-4" />
+            <span>{result.failed} failed</span>
+          </div>
+        )}
+      </div>
+      {result.errors.length > 0 && (
+        <ul className="text-sm text-muted-foreground">
+          {result.errors.slice(0, 3).map((err, i) => (
+            <li key={i}>{err}</li>
+          ))}
+          {result.errors.length > 3 && (
+            <li>...and {result.errors.length - 3} more</li>
+          )}
+        </ul>
+      )}
+      {result.success > 0 && (
+        <Button variant="outline" size="sm" onClick={onViewPrompts}>
+          View Imported Prompts
+        </Button>
+      )}
     </div>
   );
 }
