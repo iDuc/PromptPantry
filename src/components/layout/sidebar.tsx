@@ -17,6 +17,7 @@ import {
   Archive,
   Settings,
   FolderOpen,
+  Upload,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -52,6 +53,7 @@ const mainNav = [
   { href: '/', label: 'All Prompts', icon: Home },
   { href: '/favorites', label: 'Favorites', icon: Star },
   { href: '/archive', label: 'Archive', icon: Archive },
+  { href: '/import', label: 'Import', icon: Upload },
 ];
 
 export function Sidebar({ categories }: SidebarProps) {
