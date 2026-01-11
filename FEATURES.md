@@ -253,17 +253,81 @@ All user data is isolated via RLS policies:
 
 ### 7. Navigation
 
-#### Sidebar
+#### Desktop Sidebar
 - **Location:** `src/components/layout/sidebar.tsx`
 - Logo (links to home)
 - "New Prompt" button
 - Navigation links (All Prompts, Favorites, Archive)
 - Categories section with settings icon
 - Settings link at bottom
+- Hidden on mobile (`hidden md:flex`)
+
+#### Mobile Bottom Navigation
+- **Location:** `src/components/layout/mobile-bottom-nav.tsx`
+- Floating bar with glassmorphism styling
+- 5 navigation items:
+  - Home (grid icon)
+  - Favorites (star icon)
+  - **New Prompt (central FAB)** - elevated, primary action
+  - Search (search icon) - triggers search modal
+  - Menu (more icon) - triggers drawer
+- FAB hides on scroll down, shows on scroll up
+
+#### Mobile Drawer
+- **Location:** `src/components/layout/mobile-drawer.tsx`
+- Left-edge drawer using Vaul library
+- Contains: categories, settings, archive links
+- Triggered by Menu tab or swipe from left edge
+
+#### Mobile Search Modal
+- **Location:** `src/components/layout/mobile-search-modal.tsx`
+- Full-screen search overlay
+- Recent searches stored in localStorage
+- Auto-focus on open
+- Category quick filters
 
 #### Clickable Elements
 - Tags on prompt cards link to `/?tag={tag}`
 - Category badges link to `/category/{slug}`
+
+---
+
+### 8. Mobile UI / Responsive Design
+
+**Implemented:** January 2026
+
+#### Design Philosophy
+- Mobile-first responsive design
+- Bottom navigation pattern (40% faster task completion vs hamburger menus)
+- 44px minimum touch targets (Apple/Google guidelines)
+- Bottom sheets on mobile, dialogs on desktop
+
+#### Key Components
+
+##### ResponsiveDialog
+- **Location:** `src/components/ui/responsive-dialog.tsx`
+- Renders as bottom sheet (Vaul) on mobile
+- Renders as centered dialog on desktop
+- Used by: variant form, AI optimizer
+
+##### Custom Hooks
+- `src/hooks/use-media-query.ts` - Responsive breakpoint detection
+- `src/hooks/use-scroll-direction.ts` - FAB hide/show on scroll
+- `src/hooks/use-long-press.ts` - Touch gesture detection
+
+#### Mobile-Specific Features
+- **Floating action bar** on prompt detail (Copy + Favorite buttons)
+- **Single-column grid** on mobile, multi-column on desktop
+- **Horizontal scroll** for platform tabs
+- **Larger touch targets**: buttons are h-12 on mobile, h-10 on desktop
+- **Safe area insets** for notched phones (`pb-safe` utility)
+
+#### Breakpoints
+- Mobile: < 768px (`md:` prefix for desktop styles)
+- Desktop: ≥ 768px
+
+#### Dependencies
+- `vaul` - iOS-style bottom sheet drawer
 
 ---
 
@@ -311,6 +375,9 @@ Installed components:
 - tooltip, avatar, separator, scroll-area
 - alert (added for Midjourney detection)
 
+Custom components:
+- `responsive-dialog` - Mobile bottom sheet / desktop dialog hybrid (uses vaul)
+
 ---
 
 ## Environment Variables
@@ -344,7 +411,6 @@ See `FUTURE_FEATURES.md` for planned enhancements:
 - Collections (Pinterest-style boards)
 - Bulk import/export
 - Keyboard shortcuts (Cmd+K, Cmd+N)
-- Mobile responsiveness improvements
 - Sharing/collaboration features
 
 ---
@@ -357,4 +423,4 @@ See `FUTURE_FEATURES.md` for planned enhancements:
 
 ---
 
-*Last updated: January 11, 2026*
+*Last updated: January 11, 2026* (Mobile UI implementation)

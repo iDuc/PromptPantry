@@ -161,12 +161,15 @@ Direct import from Midjourney.
 
 **Note:** Depends on Midjourney API availability
 
-### Mobile App
-Native iOS/Android app.
+### Native Mobile App
+Native iOS/Android app (beyond current responsive web).
 - Quick capture prompts
 - Browse library
 - Copy to clipboard
 - Camera to save images
+- Push notifications
+
+**Note:** Mobile-responsive web UI implemented Jan 2026. Native app would add offline support, push notifications, and native sharing.
 
 ---
 
@@ -209,4 +212,4 @@ Mint prompts as NFTs.
 
 ---
 
-*Last updated: January 2025*
+*Last updated: January 2026*
