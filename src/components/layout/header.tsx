@@ -12,22 +12,64 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { UserMenu } from './user-menu';
+
+// Search input component with its own state, reset when URL changes
+function SearchInput({
+  initialValue,
+  onSearch
+}: {
+  initialValue: string;
+  onSearch: (value: string) => void;
+}) {
+  const [value, setValue] = useState(initialValue);
+
+  // Debounce the search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (value !== initialValue) {
+        onSearch(value);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [value, initialValue, onSearch]);
+
+  const handleClear = () => {
+    setValue('');
+    onSearch('');
+  };
+
+  return (
+    <div className="relative w-full max-w-md">
+      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+      <Input
+        placeholder="Search prompts..."
+        className="pl-9 pr-9"
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+      />
+      {value && (
+        <button
+          onClick={handleClear}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function Header() {
   const { theme, setTheme } = useTheme();
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const initialSearch = searchParams.get('search') || '';
-  const [searchValue, setSearchValue] = useState(initialSearch);
+  const urlSearch = searchParams.get('search') || '';
 
-  // Sync search value with URL params
-  useEffect(() => {
-    setSearchValue(searchParams.get('search') || '');
-  }, [searchParams]);
-
-  // Debounced search
-  const updateSearch = useCallback((value: string) => {
+  // Update URL when search value changes
+  const handleSearch = useCallback((value: string) => {
     const params = new URLSearchParams(searchParams.toString());
 
     if (value.trim()) {
@@ -40,43 +82,15 @@ export function Header() {
     router.push(queryString ? `/?${queryString}` : '/');
   }, [router, searchParams]);
 
-  // Debounce the search
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (searchValue !== initialSearch) {
-        updateSearch(searchValue);
-      }
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [searchValue, updateSearch, initialSearch]);
-
-  const handleClear = () => {
-    setSearchValue('');
-    updateSearch('');
-  };
-
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur-sm">
-      {/* Search */}
+      {/* Search - key resets component when URL search changes externally */}
       <div className="flex flex-1 items-center gap-4">
-        <div className="relative w-full max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search prompts..."
-            className="pl-9 pr-9"
-            value={searchValue}
-            onChange={(e) => setSearchValue(e.target.value)}
-          />
-          {searchValue && (
-            <button
-              onClick={handleClear}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          )}
-        </div>
+        <SearchInput
+          key={urlSearch}
+          initialValue={urlSearch}
+          onSearch={handleSearch}
+        />
       </div>
 
       {/* Actions */}
@@ -99,6 +113,7 @@ export function Header() {
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
+        <UserMenu />
       </div>
     </header>
   );

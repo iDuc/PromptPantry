@@ -17,6 +17,13 @@ import {
   Archive,
   Settings,
   FolderOpen,
+  Image,
+  Video,
+  Wand2,
+  Brush,
+  Layers,
+  Grid,
+  Heart,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -24,7 +31,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 
-// Map icon names to Lucide components
+// Map icon names to Lucide components - must match settings page iconMap
 const iconMap: Record<string, LucideIcon> = {
   Palette,
   Sun,
@@ -34,6 +41,14 @@ const iconMap: Record<string, LucideIcon> = {
   User,
   Mountain,
   Shapes,
+  Image,
+  Video,
+  Wand2,
+  Brush,
+  Layers,
+  Grid,
+  Star,
+  Heart,
 };
 
 interface Category {

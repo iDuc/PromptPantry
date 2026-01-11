@@ -12,6 +12,7 @@ const updateVariantSchema = z.object({
   rating: z.number().min(1).max(5).nullable().optional(),
   notes: z.string().nullable().optional(),
   is_best: z.boolean().optional(),
+  model_version: z.string().nullable().optional(),
 });
 
 // PATCH /api/prompts/[id]/variants/[vid] - Update a variant

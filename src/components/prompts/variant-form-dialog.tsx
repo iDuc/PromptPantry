@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { PLATFORMS } from '@/lib/constants';
+import { ImageUpload } from './image-upload';
 
 interface VariantFormData {
   platform: string;
@@ -30,6 +31,7 @@ interface VariantFormData {
   negativePrompt: string;
   parameters: string;
   notes: string;
+  resultImageUrl: string | null;
 }
 
 interface Variant {
@@ -75,6 +77,7 @@ export function VariantFormDialog({
       ? JSON.stringify(editingVariant.parameters, null, 2)
       : '',
     notes: editingVariant?.notes || '',
+    resultImageUrl: editingVariant?.result_image_url || null,
   }));
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -117,6 +120,7 @@ export function VariantFormDialog({
           parameters,
           notes: formData.notes || null,
           model_version: formData.modelVersion || null,
+          result_image_url: formData.resultImageUrl,
         }),
       });
 
@@ -146,6 +150,7 @@ export function VariantFormDialog({
           ? JSON.stringify(editingVariant.parameters, null, 2)
           : '',
         notes: editingVariant?.notes || '',
+        resultImageUrl: editingVariant?.result_image_url || null,
       });
     }
     onOpenChange(newOpen);
@@ -257,6 +262,19 @@ export function VariantFormDialog({
               placeholder="Any notes about this variant..."
               rows={2}
             />
+          </div>
+
+          {/* Result Image */}
+          <div className="space-y-2">
+            <Label>Result Image</Label>
+            <ImageUpload
+              value={formData.resultImageUrl}
+              onChange={(url) => setFormData({ ...formData, resultImageUrl: url })}
+              disabled={isSubmitting}
+            />
+            <p className="text-xs text-muted-foreground">
+              Upload the generated result image for this variant
+            </p>
           </div>
         </div>
 

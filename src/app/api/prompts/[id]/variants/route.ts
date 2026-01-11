@@ -12,6 +12,7 @@ const createVariantSchema = z.object({
   rating: z.number().min(1).max(5).nullable().optional(),
   notes: z.string().nullable().optional(),
   is_best: z.boolean().default(false),
+  model_version: z.string().nullable().optional(),
 });
 
 // POST /api/prompts/[id]/variants - Add a variant to a prompt
@@ -22,12 +23,18 @@ export async function POST(
   const supabase = await createClient();
   const { id } = await params;
 
+  // Get authenticated user
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const validated = createVariantSchema.parse(body);
 
-    // Verify prompt exists
-    const { data: prompt, error: promptError } = await supabase
+    // Verify prompt exists and belongs to user (RLS will handle this)
+    const { error: promptError } = await supabase
       .from('prompts')
       .select('id')
       .eq('id', id)
@@ -61,6 +68,8 @@ export async function POST(
         rating: validated.rating || null,
         notes: validated.notes || null,
         is_best: validated.is_best,
+        model_version: validated.model_version || null,
+        user_id: user.id,
       })
       .select()
       .single();

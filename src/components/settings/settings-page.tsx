@@ -3,6 +3,23 @@
 import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
   Moon, Sun, Monitor, Plus, Pencil, Trash2, GripVertical,
   Palette, Camera, Sparkles, Box, User, Mountain, Shapes,
   Image, Video, Wand2, Brush, Layers, Grid, Star, Heart, FolderOpen,
@@ -60,6 +77,86 @@ const COLOR_OPTIONS = [
   '#EF4444', '#84CC16', '#06B6D4', '#A855F7', '#F97316', '#0EA5E9', '#22C55E', '#E11D48'
 ];
 
+// Sortable category item component
+function SortableCategoryItem({
+  category,
+  onEdit,
+  onDelete,
+}: {
+  category: Category;
+  onEdit: (category: Category) => void;
+  onDelete: (category: Category) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: category.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+
+  const Icon = category.icon ? iconMap[category.icon] : FolderOpen;
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'flex items-center justify-between rounded-lg border p-3 bg-background',
+        isDragging && 'opacity-50 shadow-lg'
+      )}
+    >
+      <div className="flex items-center gap-3">
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing touch-none"
+          aria-label="Drag to reorder"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <div
+          className="flex h-8 w-8 items-center justify-center rounded-lg"
+          style={{ backgroundColor: `${category.color || '#6366F1'}20` }}
+        >
+          <Icon
+            className="h-4 w-4"
+            style={{ color: category.color || '#6366F1' }}
+          />
+        </div>
+        <span className="font-medium">{category.name}</span>
+        <Badge variant="secondary" className="text-xs">
+          {category.slug}
+        </Badge>
+      </div>
+      <div className="flex items-center gap-1">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8"
+          onClick={() => onEdit(category)}
+        >
+          <Pencil className="h-4 w-4" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-8 w-8 text-destructive hover:text-destructive"
+          onClick={() => onDelete(category)}
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export function SettingsPage({ categories: initialCategories }: SettingsPageProps) {
   const { theme, setTheme } = useTheme();
   const [categories, setCategories] = useState(initialCategories);
@@ -69,6 +166,49 @@ export function SettingsPage({ categories: initialCategories }: SettingsPageProp
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [deleteCategory, setDeleteCategory] = useState<Category | null>(null);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Handle drag end for reordering
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (over && active.id !== over.id) {
+      const oldIndex = categories.findIndex((c) => c.id === active.id);
+      const newIndex = categories.findIndex((c) => c.id === over.id);
+
+      const newCategories = arrayMove(categories, oldIndex, newIndex);
+      setCategories(newCategories);
+
+      // Persist the new order to the database
+      try {
+        const response = await fetch('/api/categories/reorder', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderedIds: newCategories.map((c) => c.id),
+          }),
+        });
+
+        if (!response.ok) throw new Error('Failed to save order');
+        toast.success('Category order updated');
+      } catch {
+        // Revert on error
+        setCategories(categories);
+        toast.error('Failed to update order');
+      }
+    }
+  };
 
   // Handle hash navigation for direct linking to categories section
   useEffect(() => {
@@ -325,58 +465,33 @@ export function SettingsPage({ categories: initialCategories }: SettingsPageProp
           </Dialog>
         </CardHeader>
         <CardContent>
-          <div className="space-y-2">
-            {categories.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
-                No categories yet. Create one to get started.
-              </p>
-            ) : (
-              categories.map((category) => {
-                const Icon = category.icon ? iconMap[category.icon] : FolderOpen;
-                return (
-                  <div
-                    key={category.id}
-                    className="flex items-center justify-between rounded-lg border p-3"
-                  >
-                    <div className="flex items-center gap-3">
-                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
-                      <div
-                        className="flex h-8 w-8 items-center justify-center rounded-lg"
-                        style={{ backgroundColor: `${category.color || '#6366F1'}20` }}
-                      >
-                        <Icon
-                          className="h-4 w-4"
-                          style={{ color: category.color || '#6366F1' }}
-                        />
-                      </div>
-                      <span className="font-medium">{category.name}</span>
-                      <Badge variant="secondary" className="text-xs">
-                        {category.slug}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => openEditDialog(category)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8 text-destructive hover:text-destructive"
-                        onClick={() => setDeleteCategory(category)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
+          {categories.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">
+              No categories yet. Create one to get started.
+            </p>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={categories.map((c) => c.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                <div className="space-y-2">
+                  {categories.map((category) => (
+                    <SortableCategoryItem
+                      key={category.id}
+                      category={category}
+                      onEdit={openEditDialog}
+                      onDelete={setDeleteCategory}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
+          )}
         </CardContent>
       </Card>
 

@@ -30,13 +30,22 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
 
+  // Get authenticated user
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const validated = createCategorySchema.parse(body);
 
     const { data, error } = await supabase
       .from('categories')
-      .insert(validated)
+      .insert({
+        ...validated,
+        user_id: user.id,
+      })
       .select()
       .single();
 

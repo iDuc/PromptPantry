@@ -85,6 +85,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
 
+  // Get authenticated user
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json();
     const validated = createPromptSchema.parse(body);
@@ -96,6 +102,7 @@ export async function POST(request: NextRequest) {
         base_prompt: validated.base_prompt,
         category_id: validated.category_id || null,
         tags: validated.tags,
+        user_id: user.id,
       })
       .select(`
         *,
