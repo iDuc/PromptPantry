@@ -32,7 +32,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ScrollArea } from '@/components/ui/scroll-area';
+// Note: Using native scrolling instead of ScrollArea for better iOS compatibility
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { PromptGeneratorModal } from '@/components/generator';
@@ -147,8 +147,11 @@ export function MobileDrawer({
             </Button>
           </div>
 
-          {/* Navigation */}
-          <ScrollArea className="flex-1 px-4 py-4 overflow-y-auto">
+          {/* Navigation - using native scroll for iOS compatibility */}
+          <div
+            className="flex-1 px-4 py-4 overflow-y-auto overscroll-contain"
+            style={{ WebkitOverflowScrolling: 'touch' }}
+          >
             {/* Main Navigation */}
             <nav className="space-y-1">
               {mainNav.map((item) => {
@@ -253,7 +256,7 @@ export function MobileDrawer({
                 </div>
               </>
             )}
-          </ScrollArea>
+          </div>
 
           {/* Bottom section */}
           <div className="border-t border-border p-4 space-y-1">
