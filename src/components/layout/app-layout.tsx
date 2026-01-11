@@ -15,12 +15,18 @@ interface Category {
   color: string | null;
 }
 
+interface TagWithCount {
+  name: string;
+  count: number;
+}
+
 interface AppLayoutProps {
   children: React.ReactNode;
   categories: Category[];
+  tags?: TagWithCount[];
 }
 
-export function AppLayout({ children, categories }: AppLayoutProps) {
+export function AppLayout({ children, categories, tags = [] }: AppLayoutProps) {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
 
@@ -28,7 +34,7 @@ export function AppLayout({ children, categories }: AppLayoutProps) {
     <div className="flex min-h-screen">
       {/* Desktop sidebar - hidden on mobile */}
       <div className="hidden md:block">
-        <Sidebar categories={categories} />
+        <Sidebar categories={categories} tags={tags} />
       </div>
 
       {/* Main content - responsive margin */}
@@ -49,6 +55,7 @@ export function AppLayout({ children, categories }: AppLayoutProps) {
       {/* Mobile drawer - hidden on desktop */}
       <MobileDrawer
         categories={categories}
+        tags={tags}
         open={drawerOpen}
         onOpenChange={setDrawerOpen}
       />

@@ -25,6 +25,7 @@ import {
   Layers,
   Grid,
   Heart,
+  Tag,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -59,8 +60,14 @@ interface Category {
   color: string | null;
 }
 
+interface TagWithCount {
+  name: string;
+  count: number;
+}
+
 interface MobileDrawerProps {
   categories: Category[];
+  tags?: TagWithCount[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
@@ -78,6 +85,7 @@ const bottomNav = [
 
 export function MobileDrawer({
   categories,
+  tags = [],
   open,
   onOpenChange,
 }: MobileDrawerProps) {
@@ -175,6 +183,46 @@ export function MobileDrawer({
                 );
               })}
             </div>
+
+            {/* Tags */}
+            {tags.length > 0 && (
+              <>
+                <Separator className="my-4" />
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between px-3 py-2">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Popular Tags
+                    </span>
+                    <Link
+                      href="/tags"
+                      onClick={handleNavClick}
+                      className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                      See all
+                    </Link>
+                  </div>
+                  {tags.map((tag) => (
+                    <Link
+                      key={tag.name}
+                      href={`/?tags=${encodeURIComponent(tag.name)}`}
+                      onClick={handleNavClick}
+                      className={cn(
+                        'flex items-center justify-between rounded-lg px-3 text-sm font-medium transition-colors',
+                        'min-h-[44px]',
+                        'text-muted-foreground hover:bg-muted hover:text-foreground',
+                        'active:bg-primary/20'
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Tag className="h-5 w-5" />
+                        <span className="truncate">{tag.name}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{tag.count}</span>
+                    </Link>
+                  ))}
+                </div>
+              </>
+            )}
           </ScrollArea>
 
           {/* Bottom section */}

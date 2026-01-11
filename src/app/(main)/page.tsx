@@ -7,14 +7,18 @@ import Link from 'next/link';
 interface HomePageProps {
   searchParams: Promise<{
     search?: string;
-    tag?: string;
+    tags?: string;
+    tag?: string; // Keep for backwards compatibility
   }>;
 }
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
   const search = params.search || '';
-  const tag = params.tag || '';
+
+  // Support both 'tags' (new, comma-separated) and 'tag' (old, single tag)
+  const tagsParam = params.tags || params.tag || '';
+  const activeTags = tagsParam ? tagsParam.split(',').filter(Boolean) : [];
 
   const supabase = await createClient();
 
@@ -32,15 +36,25 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     query = query.or(`title.ilike.%${search}%,base_prompt.ilike.%${search}%`);
   }
 
-  // Apply tag filter
-  if (tag) {
-    query = query.contains('tags', [tag]);
+  // Apply multi-tag filter (OR logic)
+  if (activeTags.length > 0) {
+    query = query.overlaps('tags', activeTags);
   }
 
   const { data: prompts } = await query.order('created_at', { ascending: false });
 
-  const hasFilters = search || tag;
+  const hasFilters = search || activeTags.length > 0;
   const resultCount = prompts?.length || 0;
+
+  // Helper to build URL without a specific tag
+  const getUrlWithoutTag = (tagToRemove: string) => {
+    const remainingTags = activeTags.filter(t => t !== tagToRemove);
+    const params = new URLSearchParams();
+    if (search) params.set('search', search);
+    if (remainingTags.length > 0) params.set('tags', remainingTags.join(','));
+    const queryString = params.toString();
+    return queryString ? `/?${queryString}` : '/';
+  };
 
   return (
     <div className="space-y-6">
@@ -59,16 +73,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
             {search && ` for "${search}"`}
           </span>
 
-          {tag && (
-            <Link href={search ? `/?search=${encodeURIComponent(search)}` : '/'}>
+          {activeTags.map((tag) => (
+            <Link key={tag} href={getUrlWithoutTag(tag)}>
               <Badge variant="secondary" className="gap-1 cursor-pointer hover:bg-secondary/80">
-                Tag: {tag}
+                {tag}
                 <X className="h-3 w-3" />
               </Badge>
             </Link>
-          )}
+          ))}
 
-          {(search || tag) && (
+          {hasFilters && (
             <Link href="/" className="text-sm text-primary hover:underline">
               Clear all
             </Link>

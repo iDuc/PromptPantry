@@ -383,7 +383,7 @@ export function PromptDetail({ prompt }: PromptDetailProps) {
                   <span className="text-xs font-medium text-muted-foreground">Tags</span>
                   <div className="mt-1 flex flex-wrap gap-1">
                     {prompt.tags.map((tag) => (
-                      <Link key={tag} href={`/?tag=${encodeURIComponent(tag)}`}>
+                      <Link key={tag} href={`/?tags=${encodeURIComponent(tag)}`}>
                         <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80 transition-colors">
                           {tag}
                         </Badge>

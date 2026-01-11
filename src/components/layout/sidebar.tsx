@@ -24,6 +24,7 @@ import {
   Layers,
   Grid,
   Heart,
+  Tag,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -59,8 +60,14 @@ interface Category {
   color: string | null;
 }
 
+interface TagWithCount {
+  name: string;
+  count: number;
+}
+
 interface SidebarProps {
   categories: Category[];
+  tags?: TagWithCount[];
 }
 
 const mainNav = [
@@ -69,7 +76,7 @@ const mainNav = [
   { href: '/archive', label: 'Archive', icon: Archive },
 ];
 
-export function Sidebar({ categories }: SidebarProps) {
+export function Sidebar({ categories, tags = [] }: SidebarProps) {
   const pathname = usePathname();
 
   return (
@@ -153,6 +160,39 @@ export function Sidebar({ categories }: SidebarProps) {
             );
           })}
         </div>
+
+        {/* Tags */}
+        {tags.length > 0 && (
+          <>
+            <Separator className="my-4" />
+            <div className="space-y-1">
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Popular Tags
+                </span>
+                <Link
+                  href="/tags"
+                  className="text-xs text-muted-foreground hover:text-foreground"
+                >
+                  See all
+                </Link>
+              </div>
+              {tags.map((tag) => (
+                <Link
+                  key={tag.name}
+                  href={`/?tags=${encodeURIComponent(tag.name)}`}
+                  className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                >
+                  <div className="flex items-center gap-3">
+                    <Tag className="h-4 w-4" />
+                    <span className="truncate">{tag.name}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{tag.count}</span>
+                </Link>
+              ))}
+            </div>
+          </>
+        )}
       </ScrollArea>
 
       {/* Bottom section */}

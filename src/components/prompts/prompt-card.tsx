@@ -20,6 +20,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -62,6 +72,8 @@ export function PromptCard({ prompt }: PromptCardProps) {
   const [copied, setCopied] = useState(false);
   const [isFavorite, setIsFavorite] = useState(prompt.is_favorite);
   const [isPressed, setIsPressed] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Get the best variant image or first available
   const bestVariant = prompt.variants?.find((v) => v.is_best);
@@ -95,6 +107,40 @@ export function PromptCard({ prompt }: PromptCardProps) {
     setIsFavorite(!isFavorite);
     // TODO: Update favorite via API
     toast.success(isFavorite ? 'Removed from favorites' : 'Added to favorites');
+  };
+
+  const handleDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/prompts/${prompt.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete');
+      toast.success('Prompt deleted');
+      router.refresh();
+    } catch {
+      toast.error('Failed to delete prompt');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteDialog(false);
+    }
+  };
+
+  const handleArchive = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const response = await fetch(`/api/prompts/${prompt.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ is_archived: true }),
+      });
+      if (!response.ok) throw new Error('Failed to archive');
+      toast.success('Prompt archived');
+      router.refresh();
+    } catch {
+      toast.error('Failed to archive prompt');
+    }
   };
 
   const handleCardClick = () => {
@@ -208,12 +254,22 @@ export function PromptCard({ prompt }: PromptCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem className="min-h-[44px] md:min-h-0">
+                <DropdownMenuItem
+                  className="min-h-[44px] md:min-h-0"
+                  onClick={handleArchive}
+                >
                   <Archive className="mr-2 h-4 w-4" />
                   Archive
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive min-h-[44px] md:min-h-0">
+                <DropdownMenuItem
+                  className="text-destructive min-h-[44px] md:min-h-0"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setShowDeleteDialog(true);
+                  }}
+                >
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
@@ -255,7 +311,7 @@ export function PromptCard({ prompt }: PromptCardProps) {
             {prompt.tags?.slice(0, 2).map((tag) => (
               <Link
                 key={tag}
-                href={`/?tag=${encodeURIComponent(tag)}`}
+                href={`/?tags=${encodeURIComponent(tag)}`}
                 onClick={(e) => e.stopPropagation()}
               >
                 <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors">
@@ -280,6 +336,28 @@ export function PromptCard({ prompt }: PromptCardProps) {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete confirmation dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent onClick={(e) => e.stopPropagation()}>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Prompt</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{prompt.title}&quot;? This will also delete all variants. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? 'Deleting...' : 'Delete'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

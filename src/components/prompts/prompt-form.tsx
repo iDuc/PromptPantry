@@ -31,6 +31,7 @@ import {
 } from '@/components/ui/alert';
 import { toast } from 'sonner';
 import { PLATFORMS } from '@/lib/constants';
+import { TagAutocomplete } from '@/components/tags/tag-autocomplete';
 import {
   parseMidjourneyPrompt,
   detectMidjourneyPrompt,
@@ -73,7 +74,6 @@ interface PromptFormProps {
 export function PromptForm({ categories, initialData }: PromptFormProps) {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [tagInput, setTagInput] = useState('');
   const [parsedMj, setParsedMj] = useState<ParsedMidjourneyPrompt | null>(null);
   const [showMjDetected, setShowMjDetected] = useState(false);
   const [createVariantOnSave, setCreateVariantOnSave] = useState(false);
@@ -125,25 +125,6 @@ export function PromptForm({ categories, initialData }: PromptFormProps) {
       setValue('base_prompt', parsedMj.cleanPrompt);
       setCreateVariantOnSave(true);
       toast.success('Prompt cleaned. A Midjourney variant will be created when you save.');
-    }
-  };
-
-  const addTag = (tag: string) => {
-    const trimmedTag = tag.trim().toLowerCase();
-    if (trimmedTag && !tags.includes(trimmedTag)) {
-      setValue('tags', [...tags, trimmedTag]);
-    }
-    setTagInput('');
-  };
-
-  const removeTag = (tagToRemove: string) => {
-    setValue('tags', tags.filter((tag) => tag !== tagToRemove));
-  };
-
-  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',') {
-      e.preventDefault();
-      addTag(tagInput);
     }
   };
 
@@ -409,35 +390,14 @@ export function PromptForm({ categories, initialData }: PromptFormProps) {
 
           {/* Tags */}
           <div className="space-y-2">
-            <label htmlFor="tags" className="text-sm font-medium">
+            <label className="text-sm font-medium">
               Tags
             </label>
-            <div className="space-y-2">
-              <Input
-                id="tags"
-                placeholder="Add tags (press Enter or comma to add)"
-                value={tagInput}
-                onChange={(e) => setTagInput(e.target.value)}
-                onKeyDown={handleTagKeyDown}
-                onBlur={() => tagInput && addTag(tagInput)}
-              />
-              {tags.length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {tags.map((tag) => (
-                    <Badge key={tag} variant="secondary" className="gap-1">
-                      {tag}
-                      <button
-                        type="button"
-                        onClick={() => removeTag(tag)}
-                        className="ml-1 hover:text-destructive"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    </Badge>
-                  ))}
-                </div>
-              )}
-            </div>
+            <TagAutocomplete
+              value={tags}
+              onChange={(newTags) => setValue('tags', newTags)}
+              placeholder="Add tags..."
+            />
           </div>
 
           {/* Actions - Sticky footer on mobile */}

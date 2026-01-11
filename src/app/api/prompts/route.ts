@@ -30,7 +30,8 @@ export async function GET(request: NextRequest) {
   const isFavorite = searchParams.get('favorite');
   const isArchived = searchParams.get('archived');
   const search = searchParams.get('search');
-  const tag = searchParams.get('tag');
+  const tagsParam = searchParams.get('tags');
+  const tag = searchParams.get('tag'); // Keep for backwards compatibility
 
   if (categorySlug) {
     const { data: category } = await supabase
@@ -57,7 +58,14 @@ export async function GET(request: NextRequest) {
     query = query.or(`title.ilike.%${search}%,base_prompt.ilike.%${search}%`);
   }
 
-  if (tag) {
+  // Multi-tag filtering (OR logic - match any of the tags)
+  if (tagsParam) {
+    const tags = tagsParam.split(',').filter(Boolean);
+    if (tags.length > 0) {
+      query = query.overlaps('tags', tags);
+    }
+  } else if (tag) {
+    // Backwards compatibility for single tag
     query = query.contains('tags', [tag]);
   }
 
