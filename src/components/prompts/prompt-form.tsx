@@ -31,7 +31,7 @@ import {
   AlertTitle,
 } from '@/components/ui/alert';
 import { toast } from 'sonner';
-import { PLATFORMS } from '@/lib/constants';
+import { usePlatforms } from '@/hooks/use-platforms';
 import { TagAutocomplete } from '@/components/tags/tag-autocomplete';
 import {
   parseMidjourneyPrompt,
@@ -74,6 +74,7 @@ interface PromptFormProps {
 
 export function PromptForm({ categories, initialData }: PromptFormProps) {
   const router = useRouter();
+  const { platforms, isLoading: platformsLoading } = usePlatforms();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [parsedMj, setParsedMj] = useState<ParsedMidjourneyPrompt | null>(null);
   const [showMjDetected, setShowMjDetected] = useState(false);
@@ -244,14 +245,18 @@ export function PromptForm({ categories, initialData }: PromptFormProps) {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">None / Original</SelectItem>
-                {PLATFORMS.map((platform) => (
-                  <SelectItem key={platform.id} value={platform.id}>
-                    <span className="flex items-center gap-2">
-                      <span>{platform.icon}</span>
-                      {platform.name}
-                    </span>
-                  </SelectItem>
-                ))}
+                {platformsLoading ? (
+                  <SelectItem value="_loading" disabled>Loading platforms...</SelectItem>
+                ) : (
+                  platforms.map((platform) => (
+                    <SelectItem key={platform.slug} value={platform.slug}>
+                      <span className="flex items-center gap-2">
+                        <span>{platform.icon}</span>
+                        {platform.name}
+                      </span>
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground">

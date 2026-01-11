@@ -18,6 +18,7 @@ export const prompts = pgTable('prompts', {
   basePrompt: text('base_prompt').notNull(),
   description: text('description'), // Marketplace description for selling artwork
   categoryId: uuid('category_id').references(() => categories.id),
+  sourcePlatform: text('source_platform'), // Platform where the prompt originated
   tags: text('tags').array().default([]),
   isFavorite: boolean('is_favorite').default(false),
   isArchived: boolean('is_archived').default(false),
@@ -66,6 +67,50 @@ export const optimizationHistory = pgTable('optimization_history', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
+// Platforms for AI generation (configurable)
+export const platforms = pgTable('platforms', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  slug: text('slug').notNull().unique(),
+  name: text('name').notNull(),
+  icon: text('icon'), // Emoji or icon identifier
+  color: text('color'), // Hex color
+  type: text('type').notNull().default('image'), // 'image' | 'video'
+  optimizationPrompt: text('optimization_prompt'), // System prompt for AI optimization
+  supportsNegativePrompt: boolean('supports_negative_prompt').default(false),
+  defaultParameters: jsonb('default_parameters').default({}),
+  tips: text('tips'), // User-facing tips for this platform
+  sortOrder: integer('sort_order').default(0),
+  isActive: boolean('is_active').default(true),
+  isDefault: boolean('is_default').default(false), // System default platforms
+  userId: uuid('user_id'), // null = system default
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Prompt conversations for AI-assisted prompt generation
+export const promptConversations = pgTable('prompt_conversations', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull(),
+  title: text('title'),
+  status: text('status').default('active'), // 'active' | 'completed' | 'archived'
+  finalPrompt: text('final_prompt'),
+  finalPromptId: uuid('final_prompt_id').references(() => prompts.id, { onDelete: 'set null' }),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// Individual messages within a conversation
+export const conversationMessages = pgTable('conversation_messages', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  conversationId: uuid('conversation_id').notNull().references(() => promptConversations.id, { onDelete: 'cascade' }),
+  role: text('role').notNull(), // 'user' | 'assistant'
+  content: text('content').notNull(),
+  messageType: text('message_type'), // 'question' | 'suggestion' | 'final_prompt'
+  suggestedOptions: jsonb('suggested_options'), // Quick choice buttons shown to user
+  selectedOptionIndex: integer('selected_option_index'), // Which option user selected
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
 // Type exports for use in application
 export type Category = typeof categories.$inferSelect;
 export type NewCategory = typeof categories.$inferInsert;
@@ -81,3 +126,12 @@ export type NewPromptTemplate = typeof promptTemplates.$inferInsert;
 
 export type OptimizationHistory = typeof optimizationHistory.$inferSelect;
 export type NewOptimizationHistory = typeof optimizationHistory.$inferInsert;
+
+export type Platform = typeof platforms.$inferSelect;
+export type NewPlatform = typeof platforms.$inferInsert;
+
+export type PromptConversation = typeof promptConversations.$inferSelect;
+export type NewPromptConversation = typeof promptConversations.$inferInsert;
+
+export type ConversationMessage = typeof conversationMessages.$inferSelect;
+export type NewConversationMessage = typeof conversationMessages.$inferInsert;

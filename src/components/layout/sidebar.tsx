@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
@@ -25,12 +26,14 @@ import {
   Grid,
   Heart,
   Tag,
+  MessageSquareText,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
+import { PromptGeneratorModal } from '@/components/generator';
 
 // Map icon names to Lucide components - must match settings page iconMap
 const iconMap: Record<string, LucideIcon> = {
@@ -78,26 +81,36 @@ const mainNav = [
 
 export function Sidebar({ categories, tags = [] }: SidebarProps) {
   const pathname = usePathname();
+  const [showGenerator, setShowGenerator] = useState(false);
 
   return (
-    <aside className="fixed left-0 top-0 z-30 hidden md:flex h-screen w-64 flex-col border-r border-border bg-sidebar">
-      {/* Logo */}
-      <Link href="/" className="flex h-16 items-center gap-2 px-6 hover:opacity-80 transition-opacity">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-          <Sparkles className="h-4 w-4 text-primary-foreground" />
-        </div>
-        <span className="text-lg font-semibold">PromptPantry</span>
-      </Link>
+    <>
+      <aside className="fixed left-0 top-0 z-30 hidden md:flex h-screen w-64 flex-col border-r border-border bg-sidebar">
+        {/* Logo */}
+        <Link href="/" className="flex h-16 items-center gap-2 px-6 hover:opacity-80 transition-opacity">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+            <Sparkles className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <span className="text-lg font-semibold">PromptPantry</span>
+        </Link>
 
-      {/* New Prompt Button */}
-      <div className="px-4 pb-4">
-        <Button asChild className="w-full gap-2">
-          <Link href="/prompts/new">
-            <Plus className="h-4 w-4" />
-            New Prompt
-          </Link>
-        </Button>
-      </div>
+        {/* Action Buttons */}
+        <div className="px-4 pb-4 space-y-2">
+          <Button asChild className="w-full gap-2">
+            <Link href="/prompts/new">
+              <Plus className="h-4 w-4" />
+              New Prompt
+            </Link>
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => setShowGenerator(true)}
+          >
+            <MessageSquareText className="h-4 w-4" />
+            Generate Prompt
+          </Button>
+        </div>
 
       <ScrollArea className="flex-1 px-4">
         {/* Main Navigation */}
@@ -195,21 +208,28 @@ export function Sidebar({ categories, tags = [] }: SidebarProps) {
         )}
       </ScrollArea>
 
-      {/* Bottom section */}
-      <div className="border-t border-border p-4">
-        <Link
-          href="/settings"
-          className={cn(
-            'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-            pathname === '/settings'
-              ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-              : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-          )}
-        >
-          <Settings className="h-4 w-4" />
-          Settings
-        </Link>
-      </div>
-    </aside>
+        {/* Bottom section */}
+        <div className="border-t border-border p-4">
+          <Link
+            href="/settings"
+            className={cn(
+              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+              pathname === '/settings'
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+            )}
+          >
+            <Settings className="h-4 w-4" />
+            Settings
+          </Link>
+        </div>
+      </aside>
+
+      {/* Prompt Generator Modal */}
+      <PromptGeneratorModal
+        open={showGenerator}
+        onOpenChange={setShowGenerator}
+      />
+    </>
   );
 }

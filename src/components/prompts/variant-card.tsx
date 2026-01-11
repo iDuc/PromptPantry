@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { PLATFORMS } from '@/lib/constants';
+import { usePlatforms } from '@/hooks/use-platforms';
 
 interface Variant {
   id: string;
@@ -54,8 +54,9 @@ export function VariantCard({
 }: VariantCardProps) {
   const [copied, setCopied] = useState(false);
   const [hoveredRating, setHoveredRating] = useState<number | null>(null);
+  const { getPlatform } = usePlatforms();
 
-  const platform = PLATFORMS.find((p) => p.id === variant.platform);
+  const platform = getPlatform(variant.platform);
   const thumbnailUrl = variant.result_thumbnail_url || variant.result_image_url;
 
   const handleCopy = async () => {
@@ -94,7 +95,7 @@ export function VariantCard({
           <span className="text-xl">{platform?.icon || '?'}</span>
           <Badge
             variant="outline"
-            style={{ borderColor: platform?.color, color: platform?.color }}
+            style={{ borderColor: platform?.color || undefined, color: platform?.color || undefined }}
           >
             {platform?.name || variant.platform}
           </Badge>

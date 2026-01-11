@@ -50,6 +50,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { PlatformSettings } from './platform-settings';
 
 interface Category {
   id: string;
@@ -557,6 +558,9 @@ export function SettingsPage({ categories: initialCategories }: SettingsPageProp
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Platforms */}
+      <PlatformSettings />
 
       {/* About */}
       <Card>

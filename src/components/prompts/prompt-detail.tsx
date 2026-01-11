@@ -24,7 +24,7 @@ import { VariantFormDialog } from './variant-form-dialog';
 import { AIOptimizerModal } from './ai-optimizer-modal';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { PLATFORMS } from '@/lib/constants';
+import { usePlatforms } from '@/hooks/use-platforms';
 
 interface Category {
   id: string;
@@ -56,6 +56,7 @@ interface Prompt {
   base_prompt: string;
   description: string | null;
   category: Category | null;
+  source_platform: string | null;
   tags: string[];
   is_favorite: boolean;
   is_archived: boolean;
@@ -72,6 +73,7 @@ interface PromptDetailProps {
 
 export function PromptDetail({ prompt }: PromptDetailProps) {
   const router = useRouter();
+  const { getPlatform } = usePlatforms();
   const [copied, setCopied] = useState(false);
   const [copiedDescription, setCopiedDescription] = useState(false);
   const [isFavorite, setIsFavorite] = useState(prompt.is_favorite);
@@ -338,15 +340,15 @@ export function PromptDetail({ prompt }: PromptDetailProps) {
                 <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
                   <TabsList className="w-max md:w-full justify-start">
                     {platforms.map((platformId) => {
-                      const platform = PLATFORMS.find((p) => p.id === platformId);
+                      const platformInfo = getPlatform(platformId);
                       return (
                         <TabsTrigger
                           key={platformId}
                           value={platformId}
                           className="min-h-[44px] md:min-h-0 shrink-0"
                         >
-                          <span className="mr-2">{platform?.icon || '?'}</span>
-                          {platform?.name || platformId}
+                          <span className="mr-2">{platformInfo?.icon || '?'}</span>
+                          {platformInfo?.name || platformId}
                           <Badge variant="secondary" className="ml-2">
                             {variantsByPlatform[platformId].length}
                           </Badge>
@@ -418,6 +420,28 @@ export function PromptDetail({ prompt }: PromptDetailProps) {
                   </div>
                 </div>
               )}
+
+              {/* Source Platform */}
+              {prompt.source_platform && (() => {
+                const sourcePlatformInfo = getPlatform(prompt.source_platform);
+                return (
+                  <div>
+                    <span className="text-xs font-medium text-muted-foreground">Source Platform</span>
+                    <div className="mt-1 flex items-center gap-2">
+                      <span className="text-lg">{sourcePlatformInfo?.icon || '?'}</span>
+                      <Badge
+                        variant="outline"
+                        style={{
+                          borderColor: sourcePlatformInfo?.color || undefined,
+                          color: sourcePlatformInfo?.color || undefined,
+                        }}
+                      >
+                        {sourcePlatformInfo?.name || prompt.source_platform}
+                      </Badge>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Tags */}
               {prompt.tags && prompt.tags.length > 0 && (

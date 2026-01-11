@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { PLATFORMS } from '@/lib/constants';
+import { usePlatforms } from '@/hooks/use-platforms';
 import { Wand2, Loader2, Sparkles, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -41,6 +41,7 @@ export function AIOptimizerModal({
   onOpenChange,
   onSuccess,
 }: AIOptimizerModalProps) {
+  const { platforms, getPlatform, isLoading: platformsLoading } = usePlatforms();
   const [selectedPlatform, setSelectedPlatform] = useState<string | null>(null);
   const [isOptimizing, setIsOptimizing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -124,7 +125,7 @@ export function AIOptimizerModal({
     onOpenChange(false);
   };
 
-  const platform = PLATFORMS.find(p => p.id === selectedPlatform);
+  const platform = selectedPlatform ? getPlatform(selectedPlatform) : undefined;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -153,26 +154,32 @@ export function AIOptimizerModal({
           {/* Platform Selection */}
           <div className="space-y-3">
             <Label>Select Target Platform</Label>
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {PLATFORMS.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setSelectedPlatform(p.id);
-                    setResult(null);
-                  }}
-                  className={cn(
-                    'flex flex-col items-center gap-2 rounded-lg border p-3 transition-all hover:bg-muted',
-                    selectedPlatform === p.id
-                      ? 'border-primary bg-primary/5 ring-1 ring-primary'
-                      : 'border-border'
-                  )}
-                >
-                  <span className="text-2xl">{p.icon}</span>
-                  <span className="text-xs font-medium">{p.name}</span>
-                </button>
-              ))}
-            </div>
+            {platformsLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {platforms.map((p) => (
+                  <button
+                    key={p.slug}
+                    onClick={() => {
+                      setSelectedPlatform(p.slug);
+                      setResult(null);
+                    }}
+                    className={cn(
+                      'flex flex-col items-center gap-2 rounded-lg border p-3 transition-all hover:bg-muted',
+                      selectedPlatform === p.slug
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary'
+                        : 'border-border'
+                    )}
+                  >
+                    <span className="text-2xl">{p.icon}</span>
+                    <span className="text-xs font-medium">{p.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Generate Button */}
@@ -202,7 +209,7 @@ export function AIOptimizerModal({
             <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2">
               <div className="flex items-center gap-2">
                 <Badge
-                  style={{ backgroundColor: platform?.color, color: 'white' }}
+                  style={{ backgroundColor: platform?.color || undefined, color: 'white' }}
                 >
                   {platform?.icon} {platform?.name}
                 </Badge>

@@ -21,7 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { PLATFORMS } from '@/lib/constants';
+import { usePlatforms } from '@/hooks/use-platforms';
 import { ImageUpload } from './image-upload';
 
 interface VariantFormData {
@@ -67,6 +67,7 @@ export function VariantFormDialog({
   editingVariant,
 }: VariantFormDialogProps) {
   const isEditing = !!editingVariant;
+  const { platforms, isLoading: platformsLoading } = usePlatforms();
 
   const [formData, setFormData] = useState<VariantFormData>({
     platform: '',
@@ -189,18 +190,22 @@ export function VariantFormDialog({
               <SelectValue placeholder="Select a platform" />
             </SelectTrigger>
             <SelectContent>
-              {PLATFORMS.map((platform) => (
-                <SelectItem
-                  key={platform.id}
-                  value={platform.id}
-                  className="min-h-[44px] md:min-h-0"
-                >
-                  <span className="flex items-center gap-2">
-                    <span>{platform.icon}</span>
-                    <span>{platform.name}</span>
-                  </span>
-                </SelectItem>
-              ))}
+              {platformsLoading ? (
+                <SelectItem value="_loading" disabled>Loading platforms...</SelectItem>
+              ) : (
+                platforms.map((platform) => (
+                  <SelectItem
+                    key={platform.slug}
+                    value={platform.slug}
+                    className="min-h-[44px] md:min-h-0"
+                  >
+                    <span className="flex items-center gap-2">
+                      <span>{platform.icon}</span>
+                      <span>{platform.name}</span>
+                    </span>
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
