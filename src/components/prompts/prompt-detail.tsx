@@ -1,13 +1,27 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Copy, Check, Heart, Plus, Wand2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { VariantCard } from './variant-card';
+import { VariantFormDialog } from './variant-form-dialog';
+import { AIOptimizerModal } from './ai-optimizer-modal';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { PLATFORMS } from '@/lib/constants';
@@ -33,6 +47,7 @@ interface Variant {
   notes: string | null;
   is_best: boolean;
   created_at: string;
+  model_version?: string | null;
 }
 
 interface Prompt {
@@ -55,8 +70,13 @@ interface PromptDetailProps {
 }
 
 export function PromptDetail({ prompt }: PromptDetailProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [isFavorite, setIsFavorite] = useState(prompt.is_favorite);
+  const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
+  const [isAIOptimizerOpen, setIsAIOptimizerOpen] = useState(false);
+  const [editingVariant, setEditingVariant] = useState<Variant | null>(null);
+  const [deletingVariant, setDeletingVariant] = useState<Variant | null>(null);
 
   // Get best variant for hero image
   const bestVariant = prompt.variants?.find((v) => v.is_best);
@@ -128,199 +148,285 @@ export function PromptDetail({ prompt }: PromptDetailProps) {
         body: JSON.stringify({ is_best: true }),
       });
       toast.success('Set as best variant');
-      // Reload to reflect changes
-      window.location.reload();
+      router.refresh();
     } catch {
       toast.error('Failed to set best variant');
     }
   };
 
+  const handleEditVariant = (variant: Variant) => {
+    setEditingVariant(variant);
+    setIsVariantDialogOpen(true);
+  };
+
+  const handleDeleteVariant = async () => {
+    if (!deletingVariant) return;
+
+    try {
+      const response = await fetch(
+        `/api/prompts/${prompt.id}/variants/${deletingVariant.id}`,
+        { method: 'DELETE' }
+      );
+
+      if (!response.ok) throw new Error('Failed to delete');
+
+      toast.success('Variant deleted');
+      setDeletingVariant(null);
+      router.refresh();
+    } catch {
+      toast.error('Failed to delete variant');
+    }
+  };
+
+  const handleVariantSuccess = () => {
+    setEditingVariant(null);
+    router.refresh();
+  };
+
+  const openAddVariantDialog = () => {
+    setEditingVariant(null);
+    setIsVariantDialogOpen(true);
+  };
+
   return (
-    <div className="grid gap-6 lg:grid-cols-3">
-      {/* Main content */}
-      <div className="lg:col-span-2 space-y-6">
-        {/* Hero Image */}
-        {heroImage && (
-          <div className="overflow-hidden rounded-lg bg-muted">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={heroImage}
-              alt={prompt.title}
-              className="w-full object-contain"
-            />
-          </div>
-        )}
+    <>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main content */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Hero Image */}
+          {heroImage && (
+            <div className="overflow-hidden rounded-lg bg-muted">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={heroImage}
+                alt={prompt.title}
+                className="w-full object-contain"
+              />
+            </div>
+          )}
 
-        {/* Base Prompt */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base font-medium">Base Prompt</CardTitle>
-            <div className="flex items-center gap-2">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={handleFavorite}
-              >
-                <Heart
-                  className={cn(
-                    'mr-2 h-4 w-4',
-                    isFavorite && 'fill-accent text-accent'
+          {/* Base Prompt */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base font-medium">Base Prompt</CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleFavorite}
+                >
+                  <Heart
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      isFavorite && 'fill-accent text-accent'
+                    )}
+                  />
+                  {isFavorite ? 'Favorited' : 'Favorite'}
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleCopy}>
+                  {copied ? (
+                    <Check className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Copy className="mr-2 h-4 w-4" />
                   )}
-                />
-                {isFavorite ? 'Favorited' : 'Favorite'}
-              </Button>
-              <Button size="sm" variant="outline" onClick={handleCopy}>
-                {copied ? (
-                  <Check className="mr-2 h-4 w-4" />
-                ) : (
-                  <Copy className="mr-2 h-4 w-4" />
-                )}
-                Copy
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <p className="prompt-text text-sm leading-relaxed">{prompt.base_prompt}</p>
-          </CardContent>
-        </Card>
+                  Copy
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <p className="prompt-text text-sm leading-relaxed">{prompt.base_prompt}</p>
+            </CardContent>
+          </Card>
 
-        {/* Variants */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Platform Variants</h2>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm">
-                <Wand2 className="mr-2 h-4 w-4" />
-                AI Optimize
-              </Button>
-              <Button size="sm">
-                <Plus className="mr-2 h-4 w-4" />
-                Add Variant
-              </Button>
+          {/* Variants */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Platform Variants</h2>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setIsAIOptimizerOpen(true)}>
+                  <Wand2 className="mr-2 h-4 w-4" />
+                  AI Optimize
+                </Button>
+                <Button size="sm" onClick={openAddVariantDialog}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Variant
+                </Button>
+              </div>
             </div>
+
+            {platforms.length > 0 ? (
+              <Tabs defaultValue={platforms[0]} className="w-full">
+                <TabsList className="w-full justify-start">
+                  {platforms.map((platformId) => {
+                    const platform = PLATFORMS.find((p) => p.id === platformId);
+                    return (
+                      <TabsTrigger key={platformId} value={platformId}>
+                        <span className="mr-2">{platform?.icon || '?'}</span>
+                        {platform?.name || platformId}
+                        <Badge variant="secondary" className="ml-2">
+                          {variantsByPlatform[platformId].length}
+                        </Badge>
+                      </TabsTrigger>
+                    );
+                  })}
+                </TabsList>
+
+                {platforms.map((platformId) => (
+                  <TabsContent key={platformId} value={platformId} className="mt-4">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      {variantsByPlatform[platformId].map((variant) => (
+                        <VariantCard
+                          key={variant.id}
+                          variant={variant}
+                          onRatingChange={(rating) => handleRatingChange(variant.id, rating)}
+                          onSetBest={() => handleSetBest(variant.id)}
+                          onEdit={() => handleEditVariant(variant)}
+                          onDelete={() => setDeletingVariant(variant)}
+                        />
+                      ))}
+                    </div>
+                  </TabsContent>
+                ))}
+              </Tabs>
+            ) : (
+              <Card className="border-dashed">
+                <CardContent className="flex flex-col items-center justify-center py-8">
+                  <p className="text-muted-foreground">No variants yet</p>
+                  <p className="text-sm text-muted-foreground">
+                    Add platform-specific variants or use AI to optimize
+                  </p>
+                  <Button className="mt-4" onClick={openAddVariantDialog}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Your First Variant
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
           </div>
+        </div>
 
-          {platforms.length > 0 ? (
-            <Tabs defaultValue={platforms[0]} className="w-full">
-              <TabsList className="w-full justify-start">
-                {platforms.map((platformId) => {
-                  const platform = PLATFORMS.find((p) => p.id === platformId);
-                  return (
-                    <TabsTrigger key={platformId} value={platformId}>
-                      <span className="mr-2">{platform?.icon || '?'}</span>
-                      {platform?.name || platformId}
-                      <Badge variant="secondary" className="ml-2">
-                        {variantsByPlatform[platformId].length}
+        {/* Sidebar */}
+        <div className="space-y-6">
+          {/* Info Card */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {/* Category */}
+              {prompt.category && (
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">Category</span>
+                  <div className="mt-1">
+                    <Link href={`/category/${prompt.category.slug}`}>
+                      <Badge
+                        variant="outline"
+                        className="cursor-pointer hover:bg-muted transition-colors"
+                        style={{
+                          borderColor: prompt.category.color || undefined,
+                          color: prompt.category.color || undefined,
+                        }}
+                      >
+                        {prompt.category.name}
                       </Badge>
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
+                    </Link>
+                  </div>
+                </div>
+              )}
 
-              {platforms.map((platformId) => (
-                <TabsContent key={platformId} value={platformId} className="mt-4">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    {variantsByPlatform[platformId].map((variant) => (
-                      <VariantCard
-                        key={variant.id}
-                        variant={variant}
-                        onRatingChange={(rating) => handleRatingChange(variant.id, rating)}
-                        onSetBest={() => handleSetBest(variant.id)}
-                      />
+              {/* Tags */}
+              {prompt.tags && prompt.tags.length > 0 && (
+                <div>
+                  <span className="text-xs font-medium text-muted-foreground">Tags</span>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {prompt.tags.map((tag) => (
+                      <Link key={tag} href={`/?tag=${encodeURIComponent(tag)}`}>
+                        <Badge variant="secondary" className="cursor-pointer hover:bg-secondary/80 transition-colors">
+                          {tag}
+                        </Badge>
+                      </Link>
                     ))}
                   </div>
-                </TabsContent>
-              ))}
-            </Tabs>
-          ) : (
-            <Card className="border-dashed">
-              <CardContent className="flex flex-col items-center justify-center py-8">
-                <p className="text-muted-foreground">No variants yet</p>
-                <p className="text-sm text-muted-foreground">
-                  Add platform-specific variants or use AI to optimize
-                </p>
-              </CardContent>
-            </Card>
-          )}
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Stats */}
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div>
+                  <p className="text-2xl font-bold">{prompt.use_count}</p>
+                  <p className="text-xs text-muted-foreground">Times Used</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{prompt.variants?.length || 0}</p>
+                  <p className="text-xs text-muted-foreground">Variants</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              {/* Timestamps */}
+              <div className="space-y-2 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Created</span>
+                  <span>{new Date(prompt.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Updated</span>
+                  <span>{new Date(prompt.updated_at).toLocaleDateString()}</span>
+                </div>
+                {prompt.last_used_at && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Last Used</span>
+                    <span>{new Date(prompt.last_used_at).toLocaleDateString()}</span>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
-      {/* Sidebar */}
-      <div className="space-y-6">
-        {/* Info Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {/* Category */}
-            {prompt.category && (
-              <div>
-                <span className="text-xs font-medium text-muted-foreground">Category</span>
-                <div className="mt-1">
-                  <Badge
-                    variant="outline"
-                    style={{
-                      borderColor: prompt.category.color || undefined,
-                      color: prompt.category.color || undefined,
-                    }}
-                  >
-                    {prompt.category.name}
-                  </Badge>
-                </div>
-              </div>
-            )}
+      {/* Variant Form Dialog */}
+      <VariantFormDialog
+        promptId={prompt.id}
+        basePrompt={prompt.base_prompt}
+        open={isVariantDialogOpen}
+        onOpenChange={setIsVariantDialogOpen}
+        onSuccess={handleVariantSuccess}
+        editingVariant={editingVariant}
+      />
 
-            {/* Tags */}
-            {prompt.tags && prompt.tags.length > 0 && (
-              <div>
-                <span className="text-xs font-medium text-muted-foreground">Tags</span>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {prompt.tags.map((tag) => (
-                    <Badge key={tag} variant="secondary">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-            )}
+      {/* AI Optimizer Modal */}
+      <AIOptimizerModal
+        promptId={prompt.id}
+        basePrompt={prompt.base_prompt}
+        open={isAIOptimizerOpen}
+        onOpenChange={setIsAIOptimizerOpen}
+        onSuccess={handleVariantSuccess}
+      />
 
-            <Separator />
-
-            {/* Stats */}
-            <div className="grid grid-cols-2 gap-4 text-center">
-              <div>
-                <p className="text-2xl font-bold">{prompt.use_count}</p>
-                <p className="text-xs text-muted-foreground">Times Used</p>
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{prompt.variants?.length || 0}</p>
-                <p className="text-xs text-muted-foreground">Variants</p>
-              </div>
-            </div>
-
-            <Separator />
-
-            {/* Timestamps */}
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Created</span>
-                <span>{new Date(prompt.created_at).toLocaleDateString()}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Updated</span>
-                <span>{new Date(prompt.updated_at).toLocaleDateString()}</span>
-              </div>
-              {prompt.last_used_at && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Last Used</span>
-                  <span>{new Date(prompt.last_used_at).toLocaleDateString()}</span>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deletingVariant} onOpenChange={() => setDeletingVariant(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Variant</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this variant? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteVariant}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

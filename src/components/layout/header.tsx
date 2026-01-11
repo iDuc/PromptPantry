@@ -1,7 +1,9 @@
 'use client';
 
+import { useState, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Search, Command } from 'lucide-react';
+import { Moon, Sun, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -11,12 +13,48 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-interface HeaderProps {
-  onSearchOpen?: () => void;
-}
-
-export function Header({ onSearchOpen }: HeaderProps) {
+export function Header() {
   const { theme, setTheme } = useTheme();
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const initialSearch = searchParams.get('search') || '';
+  const [searchValue, setSearchValue] = useState(initialSearch);
+
+  // Sync search value with URL params
+  useEffect(() => {
+    setSearchValue(searchParams.get('search') || '');
+  }, [searchParams]);
+
+  // Debounced search
+  const updateSearch = useCallback((value: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+
+    if (value.trim()) {
+      params.set('search', value.trim());
+    } else {
+      params.delete('search');
+    }
+
+    const queryString = params.toString();
+    router.push(queryString ? `/?${queryString}` : '/');
+  }, [router, searchParams]);
+
+  // Debounce the search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (searchValue !== initialSearch) {
+        updateSearch(searchValue);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchValue, updateSearch, initialSearch]);
+
+  const handleClear = () => {
+    setSearchValue('');
+    updateSearch('');
+  };
 
   return (
     <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border bg-background/80 px-6 backdrop-blur-sm">
@@ -26,13 +64,18 @@ export function Header({ onSearchOpen }: HeaderProps) {
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             placeholder="Search prompts..."
-            className="pl-9 pr-12"
-            onClick={onSearchOpen}
-            readOnly
+            className="pl-9 pr-9"
+            value={searchValue}
+            onChange={(e) => setSearchValue(e.target.value)}
           />
-          <kbd className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 rounded border border-border bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-            <Command className="inline h-3 w-3" />K
-          </kbd>
+          {searchValue && (
+            <button
+              onClick={handleClear}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
         </div>
       </div>
 

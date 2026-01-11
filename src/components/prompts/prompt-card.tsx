@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { Star, Copy, Check, MoreHorizontal, Heart, Archive, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -57,6 +58,7 @@ interface PromptCardProps {
 }
 
 export function PromptCard({ prompt }: PromptCardProps) {
+  const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [isFavorite, setIsFavorite] = useState(prompt.is_favorite);
 
@@ -94,8 +96,12 @@ export function PromptCard({ prompt }: PromptCardProps) {
     toast.success(isFavorite ? 'Removed from favorites' : 'Added to favorites');
   };
 
+  const handleCardClick = () => {
+    router.push(`/prompts/${prompt.id}`);
+  };
+
   return (
-    <Link href={`/prompts/${prompt.id}`}>
+    <div onClick={handleCardClick} className="cursor-pointer">
       <Card className="group overflow-hidden transition-all hover:ring-2 hover:ring-primary/50">
         {/* Image */}
         <div className="relative aspect-square overflow-hidden bg-muted">
@@ -206,21 +212,32 @@ export function PromptCard({ prompt }: PromptCardProps) {
 
           <div className="mt-2 flex flex-wrap gap-1">
             {prompt.category && (
-              <Badge
-                variant="outline"
-                className="text-xs"
-                style={{
-                  borderColor: prompt.category.color || undefined,
-                  color: prompt.category.color || undefined,
-                }}
+              <Link
+                href={`/category/${prompt.category.slug}`}
+                onClick={(e) => e.stopPropagation()}
               >
-                {prompt.category.name}
-              </Badge>
+                <Badge
+                  variant="outline"
+                  className="text-xs cursor-pointer hover:bg-muted transition-colors"
+                  style={{
+                    borderColor: prompt.category.color || undefined,
+                    color: prompt.category.color || undefined,
+                  }}
+                >
+                  {prompt.category.name}
+                </Badge>
+              </Link>
             )}
             {prompt.tags?.slice(0, 2).map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-xs">
-                {tag}
-              </Badge>
+              <Link
+                key={tag}
+                href={`/?tag=${encodeURIComponent(tag)}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Badge variant="secondary" className="text-xs cursor-pointer hover:bg-secondary/80 transition-colors">
+                  {tag}
+                </Badge>
+              </Link>
             ))}
             {(prompt.tags?.length || 0) > 2 && (
               <Badge variant="secondary" className="text-xs">
@@ -239,6 +256,6 @@ export function PromptCard({ prompt }: PromptCardProps) {
           )}
         </CardContent>
       </Card>
-    </Link>
+    </div>
   );
 }

@@ -17,7 +17,6 @@ import {
   Archive,
   Settings,
   FolderOpen,
-  Upload,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -53,7 +52,6 @@ const mainNav = [
   { href: '/', label: 'All Prompts', icon: Home },
   { href: '/favorites', label: 'Favorites', icon: Star },
   { href: '/archive', label: 'Archive', icon: Archive },
-  { href: '/import', label: 'Import', icon: Upload },
 ];
 
 export function Sidebar({ categories }: SidebarProps) {
@@ -62,12 +60,12 @@ export function Sidebar({ categories }: SidebarProps) {
   return (
     <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col border-r border-border bg-sidebar">
       {/* Logo */}
-      <div className="flex h-16 items-center gap-2 px-6">
+      <Link href="/" className="flex h-16 items-center gap-2 px-6 hover:opacity-80 transition-opacity">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
           <Sparkles className="h-4 w-4 text-primary-foreground" />
         </div>
         <span className="text-lg font-semibold">PromptPantry</span>
-      </div>
+      </Link>
 
       {/* New Prompt Button */}
       <div className="px-4 pb-4">
@@ -111,7 +109,7 @@ export function Sidebar({ categories }: SidebarProps) {
               Categories
             </span>
             <Link
-              href="/settings/categories"
+              href="/settings#categories"
               className="text-muted-foreground hover:text-foreground"
             >
               <Settings className="h-3.5 w-3.5" />

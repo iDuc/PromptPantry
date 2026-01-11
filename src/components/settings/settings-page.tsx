@@ -1,13 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
-import { Moon, Sun, Monitor, Palette, Plus, Pencil, Trash2, GripVertical } from 'lucide-react';
+import {
+  Moon, Sun, Monitor, Plus, Pencil, Trash2, GripVertical,
+  Palette, Camera, Sparkles, Box, User, Mountain, Shapes,
+  Image, Video, Wand2, Brush, Layers, Grid, Star, Heart, FolderOpen,
+  type LucideIcon,
+} from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import {
   Dialog,
   DialogContent,
@@ -17,7 +21,18 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 interface Category {
   id: string;
@@ -32,10 +47,13 @@ interface SettingsPageProps {
   categories: Category[];
 }
 
-const ICON_OPTIONS = [
-  'Palette', 'Sun', 'Camera', 'Sparkles', 'Box', 'User', 'Mountain', 'Shapes',
-  'Image', 'Video', 'Wand2', 'Brush', 'Layers', 'Grid', 'Star', 'Heart'
-];
+// Icon map for rendering
+const iconMap: Record<string, LucideIcon> = {
+  Palette, Sun, Camera, Sparkles, Box, User, Mountain, Shapes,
+  Image, Video, Wand2, Brush, Layers, Grid, Star, Heart,
+};
+
+const ICON_OPTIONS = Object.keys(iconMap);
 
 const COLOR_OPTIONS = [
   '#8B5CF6', '#F59E0B', '#3B82F6', '#EC4899', '#10B981', '#6366F1', '#14B8A6', '#F43F5E',
@@ -45,9 +63,24 @@ const COLOR_OPTIONS = [
 export function SettingsPage({ categories: initialCategories }: SettingsPageProps) {
   const { theme, setTheme } = useTheme();
   const [categories, setCategories] = useState(initialCategories);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [newCategory, setNewCategory] = useState({ name: '', color: '#8B5CF6', icon: 'Palette' });
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [editForm, setEditForm] = useState({ name: '', color: '', icon: '' });
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [deleteCategory, setDeleteCategory] = useState<Category | null>(null);
+
+  // Handle hash navigation for direct linking to categories section
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#categories') {
+      const element = document.getElementById('categories');
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, []);
 
   const handleAddCategory = async () => {
     if (!newCategory.name.trim()) {
@@ -82,17 +115,118 @@ export function SettingsPage({ categories: initialCategories }: SettingsPageProp
     }
   };
 
-  const handleDeleteCategory = async (id: string) => {
+  const openEditDialog = (category: Category) => {
+    setEditingCategory(category);
+    setEditForm({
+      name: category.name,
+      color: category.color || '#8B5CF6',
+      icon: category.icon || 'Palette',
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditCategory = async () => {
+    if (!editingCategory || !editForm.name.trim()) {
+      toast.error('Category name is required');
+      return;
+    }
+
+    const slug = editForm.name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+
     try {
-      const response = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+      const response = await fetch(`/api/categories/${editingCategory.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: editForm.name,
+          slug,
+          color: editForm.color,
+          icon: editForm.icon,
+        }),
+      });
+
+      if (!response.ok) throw new Error('Failed to update category');
+
+      const updated = await response.json();
+      setCategories(categories.map((c) => (c.id === updated.id ? updated : c)));
+      setIsEditDialogOpen(false);
+      setEditingCategory(null);
+      toast.success('Category updated');
+    } catch {
+      toast.error('Failed to update category');
+    }
+  };
+
+  const handleDeleteCategory = async () => {
+    if (!deleteCategory) return;
+
+    try {
+      const response = await fetch(`/api/categories/${deleteCategory.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error('Failed to delete');
 
-      setCategories(categories.filter((c) => c.id !== id));
+      setCategories(categories.filter((c) => c.id !== deleteCategory.id));
+      setDeleteCategory(null);
       toast.success('Category deleted');
     } catch {
       toast.error('Failed to delete category');
     }
   };
+
+  const IconSelector = ({
+    selectedIcon,
+    onSelect,
+    selectedColor,
+  }: {
+    selectedIcon: string;
+    onSelect: (icon: string) => void;
+    selectedColor: string;
+  }) => (
+    <div className="grid grid-cols-8 gap-2">
+      {ICON_OPTIONS.map((iconName) => {
+        const Icon = iconMap[iconName];
+        const isSelected = selectedIcon === iconName;
+        return (
+          <button
+            key={iconName}
+            type="button"
+            onClick={() => onSelect(iconName)}
+            className={cn(
+              'flex h-10 w-10 items-center justify-center rounded-lg border-2 transition-all hover:scale-110',
+              isSelected ? 'border-foreground bg-muted' : 'border-transparent hover:bg-muted'
+            )}
+          >
+            <Icon
+              className="h-5 w-5"
+              style={{ color: isSelected ? selectedColor : undefined }}
+            />
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const ColorSelector = ({
+    selectedColor,
+    onSelect,
+  }: {
+    selectedColor: string;
+    onSelect: (color: string) => void;
+  }) => (
+    <div className="flex flex-wrap gap-2">
+      {COLOR_OPTIONS.map((color) => (
+        <button
+          key={color}
+          type="button"
+          onClick={() => onSelect(color)}
+          className={cn(
+            'h-8 w-8 rounded-full border-2 transition-transform hover:scale-110',
+            selectedColor === color ? 'border-foreground scale-110' : 'border-transparent'
+          )}
+          style={{ backgroundColor: color }}
+        />
+      ))}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -138,7 +272,7 @@ export function SettingsPage({ categories: initialCategories }: SettingsPageProp
       </Card>
 
       {/* Categories */}
-      <Card>
+      <Card id="categories">
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Categories</CardTitle>
@@ -151,7 +285,7 @@ export function SettingsPage({ categories: initialCategories }: SettingsPageProp
                 Add Category
               </Button>
             </DialogTrigger>
-            <DialogContent>
+            <DialogContent className="max-w-md">
               <DialogHeader>
                 <DialogTitle>Add Category</DialogTitle>
                 <DialogDescription>Create a new category for your prompts</DialogDescription>
@@ -166,19 +300,19 @@ export function SettingsPage({ categories: initialCategories }: SettingsPageProp
                   />
                 </div>
                 <div className="space-y-2">
+                  <label className="text-sm font-medium">Icon</label>
+                  <IconSelector
+                    selectedIcon={newCategory.icon}
+                    onSelect={(icon) => setNewCategory({ ...newCategory, icon })}
+                    selectedColor={newCategory.color}
+                  />
+                </div>
+                <div className="space-y-2">
                   <label className="text-sm font-medium">Color</label>
-                  <div className="flex flex-wrap gap-2">
-                    {COLOR_OPTIONS.map((color) => (
-                      <button
-                        key={color}
-                        onClick={() => setNewCategory({ ...newCategory, color })}
-                        className={`h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 ${
-                          newCategory.color === color ? 'border-foreground scale-110' : 'border-transparent'
-                        }`}
-                        style={{ backgroundColor: color }}
-                      />
-                    ))}
-                  </div>
+                  <ColorSelector
+                    selectedColor={newCategory.color}
+                    onSelect={(color) => setNewCategory({ ...newCategory, color })}
+                  />
                 </div>
               </div>
               <DialogFooter>
@@ -192,37 +326,122 @@ export function SettingsPage({ categories: initialCategories }: SettingsPageProp
         </CardHeader>
         <CardContent>
           <div className="space-y-2">
-            {categories.map((category) => (
-              <div
-                key={category.id}
-                className="flex items-center justify-between rounded-lg border p-3"
-              >
-                <div className="flex items-center gap-3">
-                  <GripVertical className="h-4 w-4 text-muted-foreground" />
+            {categories.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                No categories yet. Create one to get started.
+              </p>
+            ) : (
+              categories.map((category) => {
+                const Icon = category.icon ? iconMap[category.icon] : FolderOpen;
+                return (
                   <div
-                    className="h-3 w-3 rounded-full"
-                    style={{ backgroundColor: category.color || '#6366F1' }}
-                  />
-                  <span className="font-medium">{category.name}</span>
-                  <Badge variant="secondary" className="text-xs">
-                    {category.slug}
-                  </Badge>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => handleDeleteCategory(category.id)}
+                    key={category.id}
+                    className="flex items-center justify-between rounded-lg border p-3"
                   >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
+                    <div className="flex items-center gap-3">
+                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                      <div
+                        className="flex h-8 w-8 items-center justify-center rounded-lg"
+                        style={{ backgroundColor: `${category.color || '#6366F1'}20` }}
+                      >
+                        <Icon
+                          className="h-4 w-4"
+                          style={{ color: category.color || '#6366F1' }}
+                        />
+                      </div>
+                      <span className="font-medium">{category.name}</span>
+                      <Badge variant="secondary" className="text-xs">
+                        {category.slug}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => openEditDialog(category)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteCategory(category)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </CardContent>
       </Card>
+
+      {/* Edit Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Category</DialogTitle>
+            <DialogDescription>Update the category details</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Name</label>
+              <Input
+                value={editForm.name}
+                onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                placeholder="e.g., Portraits"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Icon</label>
+              <IconSelector
+                selectedIcon={editForm.icon}
+                onSelect={(icon) => setEditForm({ ...editForm, icon })}
+                selectedColor={editForm.color}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Color</label>
+              <ColorSelector
+                selectedColor={editForm.color}
+                onSelect={(color) => setEditForm({ ...editForm, color })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEditCategory}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteCategory} onOpenChange={() => setDeleteCategory(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Category</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete &quot;{deleteCategory?.name}&quot;? This action cannot be undone.
+              Prompts in this category will not be deleted, but will no longer have a category assigned.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteCategory}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* About */}
       <Card>
