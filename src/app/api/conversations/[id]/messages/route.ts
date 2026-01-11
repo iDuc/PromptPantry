@@ -142,9 +142,7 @@ export async function POST(
 
           const chat = model.startChat({
             history: chatHistory.slice(0, -1), // Exclude the latest user message
-            systemInstruction: {
-              parts: [{ text: GENERATOR_SYSTEM_PROMPT }],
-            },
+            systemInstruction: GENERATOR_SYSTEM_PROMPT,
           });
 
           const result = await chat.sendMessageStream(content);
