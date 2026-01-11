@@ -5,6 +5,7 @@ import { eq, and, asc } from 'drizzle-orm';
 import { createClient } from '@/lib/supabase/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GENERATOR_SYSTEM_PROMPT, parseChoices, parseFinalPrompt } from '@/lib/generator/prompts';
+import { withRetry } from '@/lib/db/utils';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -28,12 +29,14 @@ export async function GET(
     }
 
     // Verify conversation ownership
-    const conversation = await db.query.promptConversations.findFirst({
-      where: and(
-        eq(promptConversations.id, id),
-        eq(promptConversations.userId, user.id)
-      ),
-    });
+    const conversation = await withRetry(() =>
+      db.query.promptConversations.findFirst({
+        where: and(
+          eq(promptConversations.id, id),
+          eq(promptConversations.userId, user.id)
+        ),
+      })
+    );
 
     if (!conversation) {
       return NextResponse.json(
@@ -42,11 +45,13 @@ export async function GET(
       );
     }
 
-    const messages = await db
-      .select()
-      .from(conversationMessages)
-      .where(eq(conversationMessages.conversationId, id))
-      .orderBy(asc(conversationMessages.createdAt));
+    const messages = await withRetry(() =>
+      db
+        .select()
+        .from(conversationMessages)
+        .where(eq(conversationMessages.conversationId, id))
+        .orderBy(asc(conversationMessages.createdAt))
+    );
 
     return NextResponse.json(messages);
   } catch (error) {
@@ -84,12 +89,14 @@ export async function POST(
     }
 
     // Verify conversation ownership
-    const conversation = await db.query.promptConversations.findFirst({
-      where: and(
-        eq(promptConversations.id, id),
-        eq(promptConversations.userId, user.id)
-      ),
-    });
+    const conversation = await withRetry(() =>
+      db.query.promptConversations.findFirst({
+        where: and(
+          eq(promptConversations.id, id),
+          eq(promptConversations.userId, user.id)
+        ),
+      })
+    );
 
     if (!conversation) {
       return NextResponse.json(
@@ -99,22 +106,26 @@ export async function POST(
     }
 
     // Save user message
-    const [userMessage] = await db
-      .insert(conversationMessages)
-      .values({
-        conversationId: id,
-        role: 'user',
-        content: content.trim(),
-        selectedOptionIndex: selectedOptionIndex ?? null,
-      })
-      .returning();
+    const [userMessage] = await withRetry(() =>
+      db
+        .insert(conversationMessages)
+        .values({
+          conversationId: id,
+          role: 'user',
+          content: content.trim(),
+          selectedOptionIndex: selectedOptionIndex ?? null,
+        })
+        .returning()
+    );
 
     // Get conversation history for context
-    const history = await db
-      .select()
-      .from(conversationMessages)
-      .where(eq(conversationMessages.conversationId, id))
-      .orderBy(asc(conversationMessages.createdAt));
+    const history = await withRetry(() =>
+      db
+        .select()
+        .from(conversationMessages)
+        .where(eq(conversationMessages.conversationId, id))
+        .orderBy(asc(conversationMessages.createdAt))
+    );
 
     // Build chat history for Gemini
     const chatHistory = history.map((msg) => ({
@@ -131,7 +142,9 @@ export async function POST(
 
           const chat = model.startChat({
             history: chatHistory.slice(0, -1), // Exclude the latest user message
-            systemInstruction: GENERATOR_SYSTEM_PROMPT,
+            systemInstruction: {
+              parts: [{ text: GENERATOR_SYSTEM_PROMPT }],
+            },
           });
 
           const result = await chat.sendMessageStream(content);

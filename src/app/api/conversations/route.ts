@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { promptConversations, conversationMessages } from '@/lib/db/schema';
 import { eq, desc, and } from 'drizzle-orm';
 import { createClient } from '@/lib/supabase/server';
+import { withRetry } from '@/lib/db/utils';
 
 // GET /api/conversations - List all conversations for the user
 export async function GET(request: NextRequest) {
@@ -63,27 +64,31 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { title } = body;
 
-    const [conversation] = await db
-      .insert(promptConversations)
-      .values({
-        userId: user.id,
-        title: title || 'New Conversation',
-        status: 'active',
-      })
-      .returning();
+    const [conversation] = await withRetry(async () => {
+      return await db
+        .insert(promptConversations)
+        .values({
+          userId: user.id,
+          title: title || 'New Conversation',
+          status: 'active',
+        })
+        .returning();
+    });
 
     // Add initial assistant message
-    await db.insert(conversationMessages).values({
-      conversationId: conversation.id,
-      role: 'assistant',
-      content: "What kind of image would you like to create? Tell me about your idea, even if it's just rough.",
-      messageType: 'question',
-      suggestedOptions: [
-        'Portrait photography',
-        'Landscape scene',
-        'Product shot',
-        'Abstract art',
-      ],
+    await withRetry(async () => {
+      return await db.insert(conversationMessages).values({
+        conversationId: conversation.id,
+        role: 'assistant',
+        content: "What kind of image would you like to create? Tell me about your idea, even if it's just rough.",
+        messageType: 'question',
+        suggestedOptions: [
+          'Portrait photography',
+          'Landscape scene',
+          'Product shot',
+          'Abstract art',
+        ],
+      });
     });
 
     return NextResponse.json(conversation, { status: 201 });

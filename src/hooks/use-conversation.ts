@@ -73,8 +73,21 @@ export function useConversation(options: UseConversationOptions = {}): UseConver
         setFinalPrompt(data.finalPrompt);
         onFinalPrompt?.(data.finalPrompt);
       }
-      // Refresh messages to get the saved assistant message
-      if (conversation?.id) {
+
+      // For local conversations, add the assistant message locally
+      if (conversation?.id?.startsWith('local-') && data.fullResponse) {
+        const assistantMessage: ConversationMessage = {
+          id: `msg-${Date.now()}`,
+          conversationId: conversation.id,
+          role: 'assistant',
+          content: data.fullResponse,
+          messageType: data.messageType,
+          suggestedOptions: data.choices,
+          createdAt: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } else if (conversation?.id && !conversation.id.startsWith('local-')) {
+        // Refresh messages to get the saved assistant message from database
         loadMessages(conversation.id);
       }
     },
@@ -128,7 +141,7 @@ export function useConversation(options: UseConversationOptions = {}): UseConver
     }
   }, []);
 
-  // Create new conversation
+  // Create new conversation (with fallback to stateless mode)
   const createConversation = useCallback(async (title?: string): Promise<Conversation | null> => {
     setIsLoading(true);
     setError(null);
@@ -143,7 +156,42 @@ export function useConversation(options: UseConversationOptions = {}): UseConver
         body: JSON.stringify({ title }),
       });
 
-      if (!response.ok) throw new Error('Failed to create conversation');
+      if (!response.ok) {
+        // Fall back to stateless mode - create a local conversation
+        console.log('Falling back to stateless mode');
+        const localConversation: Conversation = {
+          id: `local-${Date.now()}`,
+          userId: 'local',
+          title: title || 'New Conversation',
+          status: 'active',
+          finalPrompt: null,
+          finalPromptId: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        setConversation(localConversation);
+
+        // Add initial assistant message locally
+        const initialMessage: ConversationMessage = {
+          id: `msg-${Date.now()}`,
+          conversationId: localConversation.id,
+          role: 'assistant',
+          content: "What kind of image would you like to create? Tell me about your idea, even if it's just rough.",
+          messageType: 'question',
+          suggestedOptions: [
+            'Portrait photography',
+            'Landscape scene',
+            'Product shot',
+            'Abstract art',
+          ],
+          createdAt: new Date().toISOString(),
+        };
+        setMessages([initialMessage]);
+        setCurrentChoices(initialMessage.suggestedOptions as string[]);
+
+        return localConversation;
+      }
+
       const data = await response.json();
       setConversation(data);
 
@@ -152,8 +200,39 @@ export function useConversation(options: UseConversationOptions = {}): UseConver
 
       return data;
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to create conversation'));
-      return null;
+      // Fall back to stateless mode on any error
+      console.log('Falling back to stateless mode due to error:', err);
+      const localConversation: Conversation = {
+        id: `local-${Date.now()}`,
+        userId: 'local',
+        title: title || 'New Conversation',
+        status: 'active',
+        finalPrompt: null,
+        finalPromptId: null,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      setConversation(localConversation);
+
+      // Add initial assistant message locally
+      const initialMessage: ConversationMessage = {
+        id: `msg-${Date.now()}`,
+        conversationId: localConversation.id,
+        role: 'assistant',
+        content: "What kind of image would you like to create? Tell me about your idea, even if it's just rough.",
+        messageType: 'question',
+        suggestedOptions: [
+          'Portrait photography',
+          'Landscape scene',
+          'Product shot',
+          'Abstract art',
+        ],
+        createdAt: new Date().toISOString(),
+      };
+      setMessages([initialMessage]);
+      setCurrentChoices(initialMessage.suggestedOptions as string[]);
+
+      return localConversation;
     } finally {
       setIsLoading(false);
     }
@@ -180,13 +259,27 @@ export function useConversation(options: UseConversationOptions = {}): UseConver
       };
       setMessages((prev) => [...prev, tempUserMessage]);
 
-      // Start streaming
-      await startStream(`/api/conversations/${conversation.id}/messages`, {
-        content,
-        selectedOptionIndex,
-      });
+      // Check if this is a local (stateless) conversation
+      if (conversation.id.startsWith('local-')) {
+        // Use stateless API with message history
+        const history = messages.map((m) => ({
+          role: m.role,
+          content: m.content,
+        }));
+
+        await startStream('/api/generate', {
+          message: content,
+          history,
+        });
+      } else {
+        // Use database-backed conversation API
+        await startStream(`/api/conversations/${conversation.id}/messages`, {
+          content,
+          selectedOptionIndex,
+        });
+      }
     },
-    [conversation?.id, startStream]
+    [conversation?.id, messages, startStream]
   );
 
   // Save to library
@@ -197,6 +290,38 @@ export function useConversation(options: UseConversationOptions = {}): UseConver
       }
 
       try {
+        // For local conversations, create the prompt directly
+        if (conversation.id.startsWith('local-')) {
+          const promptToSave = saveOptions.prompt || finalPrompt;
+          if (!promptToSave) {
+            throw new Error('No prompt to save');
+          }
+
+          const response = await fetch('/api/prompts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: saveOptions.title || 'Generated Prompt',
+              basePrompt: promptToSave,
+              categoryId: saveOptions.categoryId,
+              tags: saveOptions.tags || [],
+            }),
+          });
+
+          if (!response.ok) throw new Error('Failed to save prompt');
+          const data = await response.json();
+
+          // Update conversation state
+          setConversation((prev) => prev ? {
+            ...prev,
+            status: 'completed',
+            finalPromptId: data.id,
+          } : null);
+
+          return { prompt: data };
+        }
+
+        // For database-backed conversations, use the finalize endpoint
         const response = await fetch(`/api/conversations/${conversation.id}/finalize`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -219,7 +344,7 @@ export function useConversation(options: UseConversationOptions = {}): UseConver
         return null;
       }
     },
-    [conversation?.id]
+    [conversation?.id, finalPrompt]
   );
 
   // Update conversation

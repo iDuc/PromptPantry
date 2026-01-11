@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Drawer } from 'vaul';
@@ -26,11 +27,15 @@ import {
   Grid,
   Heart,
   Tag,
+  Plus,
+  MessageSquareText,
   type LucideIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
+import { Button } from '@/components/ui/button';
+import { PromptGeneratorModal } from '@/components/generator';
 
 // Map icon names to Lucide components - must match sidebar.tsx
 const iconMap: Record<string, LucideIcon> = {
@@ -90,12 +95,19 @@ export function MobileDrawer({
   onOpenChange,
 }: MobileDrawerProps) {
   const pathname = usePathname();
+  const [showGenerator, setShowGenerator] = useState(false);
 
   const handleNavClick = () => {
     onOpenChange(false);
   };
 
+  const handleGeneratorClick = () => {
+    onOpenChange(false);
+    setShowGenerator(true);
+  };
+
   return (
+    <>
     <Drawer.Root open={open} onOpenChange={onOpenChange} direction="left">
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 z-50 bg-black/40" />
@@ -110,15 +122,33 @@ export function MobileDrawer({
           )}
         >
           {/* Header */}
-          <div className="flex h-16 items-center gap-2 px-6 border-b border-border">
+          <div className="flex h-16 items-center gap-2 px-6 border-b border-border shrink-0">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <Sparkles className="h-4 w-4 text-primary-foreground" />
             </div>
             <span className="text-lg font-semibold">PromptPantry</span>
           </div>
 
+          {/* Action Buttons */}
+          <div className="px-4 py-4 space-y-2 shrink-0 border-b border-border">
+            <Button asChild className="w-full gap-2 min-h-[44px]">
+              <Link href="/prompts/new" onClick={handleNavClick}>
+                <Plus className="h-4 w-4" />
+                New Prompt
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              className="w-full gap-2 min-h-[44px]"
+              onClick={handleGeneratorClick}
+            >
+              <MessageSquareText className="h-4 w-4" />
+              Generate Prompt
+            </Button>
+          </div>
+
           {/* Navigation */}
-          <ScrollArea className="flex-1 px-4 py-4">
+          <ScrollArea className="flex-1 px-4 py-4 overflow-y-auto">
             {/* Main Navigation */}
             <nav className="space-y-1">
               {mainNav.map((item) => {
@@ -254,5 +284,12 @@ export function MobileDrawer({
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
+
+    {/* Prompt Generator Modal */}
+    <PromptGeneratorModal
+      open={showGenerator}
+      onOpenChange={setShowGenerator}
+    />
+    </>
   );
 }

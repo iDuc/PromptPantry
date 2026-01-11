@@ -14,7 +14,7 @@ import { ChatInterface } from './chat-interface';
 import { useConversation } from '@/hooks/use-conversation';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Sparkles, Loader2, X } from 'lucide-react';
+import { Sparkles, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface PromptGeneratorModalProps {
@@ -100,10 +100,6 @@ export function PromptGeneratorModal({
     }
   }, [promptToSave, saveTitle, saveToLibrary, onOpenChange, router]);
 
-  const handleClose = () => {
-    onOpenChange(false);
-  };
-
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -116,20 +112,10 @@ export function PromptGeneratorModal({
         >
           {/* Header */}
           <DialogHeader className="px-6 py-4 border-b border-border/50 shrink-0">
-            <div className="flex items-center justify-between">
-              <DialogTitle className="flex items-center gap-2 text-lg">
-                <Sparkles className="w-5 h-5 text-primary" />
-                Prompt Generator
-              </DialogTitle>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={handleClose}
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Sparkles className="w-5 h-5 text-primary" />
+              Prompt Generator
+            </DialogTitle>
           </DialogHeader>
 
           {/* Chat Interface */}
