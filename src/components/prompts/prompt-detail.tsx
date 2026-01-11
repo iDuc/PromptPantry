@@ -54,6 +54,7 @@ interface Prompt {
   id: string;
   title: string;
   base_prompt: string;
+  description: string | null;
   category: Category | null;
   tags: string[];
   is_favorite: boolean;
@@ -72,6 +73,7 @@ interface PromptDetailProps {
 export function PromptDetail({ prompt }: PromptDetailProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [copiedDescription, setCopiedDescription] = useState(false);
   const [isFavorite, setIsFavorite] = useState(prompt.is_favorite);
   const [isVariantDialogOpen, setIsVariantDialogOpen] = useState(false);
   const [isAIOptimizerOpen, setIsAIOptimizerOpen] = useState(false);
@@ -106,6 +108,18 @@ export function PromptDetail({ prompt }: PromptDetailProps) {
       setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error('Failed to copy prompt');
+    }
+  };
+
+  const handleCopyDescription = async () => {
+    if (!prompt.description) return;
+    try {
+      await navigator.clipboard.writeText(prompt.description);
+      setCopiedDescription(true);
+      toast.success('Description copied to clipboard');
+      setTimeout(() => setCopiedDescription(false), 2000);
+    } catch {
+      toast.error('Failed to copy description');
     }
   };
 
@@ -264,6 +278,34 @@ export function PromptDetail({ prompt }: PromptDetailProps) {
               <p className="prompt-text text-sm leading-relaxed">{prompt.base_prompt}</p>
             </CardContent>
           </Card>
+
+          {/* Description - for marketplace listings */}
+          {prompt.description && (
+            <Card>
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
+                <div>
+                  <CardTitle className="text-base font-medium">Description</CardTitle>
+                  <p className="text-xs text-muted-foreground mt-0.5">For marketplace listings</p>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleCopyDescription}
+                  className="h-10 md:h-8"
+                >
+                  {copiedDescription ? (
+                    <Check className="mr-2 h-4 w-4" />
+                  ) : (
+                    <Copy className="mr-2 h-4 w-4" />
+                  )}
+                  Copy
+                </Button>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm leading-relaxed text-muted-foreground">{prompt.description}</p>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Variants */}
           <div className="space-y-4">

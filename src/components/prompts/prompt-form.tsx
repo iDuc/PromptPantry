@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { AIFieldGenerator } from '@/components/ui/ai-field-generator';
 import {
   Select,
   SelectContent,
@@ -101,6 +102,7 @@ export function PromptForm({ categories, initialData }: PromptFormProps) {
   const categoryId = watch('category_id');
   const sourcePlatform = watch('source_platform');
   const basePrompt = watch('base_prompt');
+  const title = watch('title');
 
   // Auto-detect Midjourney prompts
   useEffect(() => {
@@ -203,9 +205,21 @@ export function PromptForm({ categories, initialData }: PromptFormProps) {
         <CardContent className="space-y-6">
           {/* Title */}
           <div className="space-y-2">
-            <label htmlFor="title" className="text-sm font-medium">
-              Title
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="title" className="text-sm font-medium">
+                Title
+              </label>
+              <AIFieldGenerator
+                fieldType="title"
+                context={{
+                  basePrompt,
+                  category: categories.find((c) => c.id === categoryId)?.name,
+                  tags,
+                }}
+                onAccept={(value) => setValue('title', value)}
+                disabled={!basePrompt}
+              />
+            </div>
             <Input
               id="title"
               placeholder="e.g., Cinematic Portrait Lighting"
@@ -349,15 +363,31 @@ export function PromptForm({ categories, initialData }: PromptFormProps) {
 
           {/* Description */}
           <div className="space-y-2">
-            <label htmlFor="description" className="text-sm font-medium">
-              Description <span className="text-muted-foreground">(optional)</span>
-            </label>
+            <div className="flex items-center justify-between">
+              <label htmlFor="description" className="text-sm font-medium">
+                Description <span className="text-muted-foreground">(optional)</span>
+              </label>
+              <AIFieldGenerator
+                fieldType="description"
+                context={{
+                  basePrompt,
+                  category: categories.find((c) => c.id === categoryId)?.name,
+                  tags,
+                  existingTitle: title,
+                }}
+                onAccept={(value) => setValue('description', value)}
+                disabled={!basePrompt}
+              />
+            </div>
             <Textarea
               id="description"
-              placeholder="Add notes or context about this prompt..."
+              placeholder="Add a marketplace description for this artwork..."
               className="min-h-[80px]"
               {...register('description')}
             />
+            <p className="text-xs text-muted-foreground">
+              Use this for artwork listings on marketplaces like Etsy or Redbubble
+            </p>
           </div>
 
           {/* Category */}

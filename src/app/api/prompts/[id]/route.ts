@@ -5,6 +5,7 @@ import { z } from 'zod';
 const updatePromptSchema = z.object({
   title: z.string().min(1).optional(),
   base_prompt: z.string().min(1).optional(),
+  description: z.string().nullable().optional(),
   category_id: z.string().uuid().nullable().optional(),
   tags: z.array(z.string()).optional(),
   is_favorite: z.boolean().optional(),

@@ -16,6 +16,7 @@ export const prompts = pgTable('prompts', {
   id: uuid('id').primaryKey().defaultRandom(),
   title: text('title').notNull(),
   basePrompt: text('base_prompt').notNull(),
+  description: text('description'), // Marketplace description for selling artwork
   categoryId: uuid('category_id').references(() => categories.id),
   tags: text('tags').array().default([]),
   isFavorite: boolean('is_favorite').default(false),
