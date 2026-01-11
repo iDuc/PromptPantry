@@ -5,7 +5,9 @@ import { z } from 'zod';
 const createPromptSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   base_prompt: z.string().min(1, 'Prompt is required'),
+  description: z.string().nullable().optional(),
   category_id: z.string().uuid().nullable().optional(),
+  source_platform: z.string().nullable().optional(),
   tags: z.array(z.string()).default([]),
 });
 
@@ -100,7 +102,9 @@ export async function POST(request: NextRequest) {
       .insert({
         title: validated.title,
         base_prompt: validated.base_prompt,
+        description: validated.description || null,
         category_id: validated.category_id || null,
+        source_platform: validated.source_platform || null,
         tags: validated.tags,
         user_id: user.id,
       })
