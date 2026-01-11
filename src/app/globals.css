@@ -149,3 +149,35 @@
 .prompt-text {
   font-family: var(--font-jetbrains), monospace;
 }
+
+/* Mobile utilities */
+@layer utilities {
+  /* Safe area insets for notched phones (iPhone X+) */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  /* Touch target utility - 44px minimum per Apple/Google guidelines */
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  /* Bottom nav spacing - accounts for floating nav + safe area */
+  .pb-bottom-nav {
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}

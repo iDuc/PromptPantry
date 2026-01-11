@@ -1,14 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+  ResponsiveDialog,
+  ResponsiveDialogHeader,
+  ResponsiveDialogTitle,
+  ResponsiveDialogDescription,
+  ResponsiveDialogBody,
+  ResponsiveDialogFooter,
+} from '@/components/ui/responsive-dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -68,19 +68,34 @@ export function VariantFormDialog({
 }: VariantFormDialogProps) {
   const isEditing = !!editingVariant;
 
-  const [formData, setFormData] = useState<VariantFormData>(() => ({
-    platform: editingVariant?.platform || '',
-    modelVersion: editingVariant?.model_version || '',
-    optimizedPrompt: editingVariant?.optimized_prompt || basePrompt,
-    negativePrompt: editingVariant?.negative_prompt || '',
-    parameters: editingVariant?.parameters
-      ? JSON.stringify(editingVariant.parameters, null, 2)
-      : '',
-    notes: editingVariant?.notes || '',
-    resultImageUrl: editingVariant?.result_image_url || null,
-  }));
+  const [formData, setFormData] = useState<VariantFormData>({
+    platform: '',
+    modelVersion: '',
+    optimizedPrompt: basePrompt,
+    negativePrompt: '',
+    parameters: '',
+    notes: '',
+    resultImageUrl: null,
+  });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Update form data when editingVariant changes or dialog opens
+  useEffect(() => {
+    if (open) {
+      setFormData({
+        platform: editingVariant?.platform || '',
+        modelVersion: editingVariant?.model_version || '',
+        optimizedPrompt: editingVariant?.optimized_prompt || basePrompt,
+        negativePrompt: editingVariant?.negative_prompt || '',
+        parameters: editingVariant?.parameters
+          ? JSON.stringify(editingVariant.parameters, null, 2)
+          : '',
+        notes: editingVariant?.notes || '',
+        resultImageUrl: editingVariant?.result_image_url || null,
+      });
+    }
+  }, [open, editingVariant, basePrompt]);
 
   const handleSubmit = async () => {
     if (!formData.platform) {
@@ -138,155 +153,160 @@ export function VariantFormDialog({
     }
   };
 
-  // Reset form when dialog opens with new data
+  // Pass through open state changes (form data is synced via useEffect)
   const handleOpenChange = (newOpen: boolean) => {
-    if (newOpen) {
-      setFormData({
-        platform: editingVariant?.platform || '',
-        modelVersion: editingVariant?.model_version || '',
-        optimizedPrompt: editingVariant?.optimized_prompt || basePrompt,
-        negativePrompt: editingVariant?.negative_prompt || '',
-        parameters: editingVariant?.parameters
-          ? JSON.stringify(editingVariant.parameters, null, 2)
-          : '',
-        notes: editingVariant?.notes || '',
-        resultImageUrl: editingVariant?.result_image_url || null,
-      });
-    }
     onOpenChange(newOpen);
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{isEditing ? 'Edit Variant' : 'Add Variant'}</DialogTitle>
-          <DialogDescription>
-            {isEditing
-              ? 'Update the platform-specific variant details'
-              : 'Create a platform-specific variant of your prompt'}
-          </DialogDescription>
-        </DialogHeader>
+    <ResponsiveDialog
+      open={open}
+      onOpenChange={handleOpenChange}
+      snapPoints={[0.9, 1]}
+      dismissible={!isSubmitting}
+    >
+      <ResponsiveDialogHeader>
+        <ResponsiveDialogTitle>
+          {isEditing ? 'Edit Variant' : 'Add Variant'}
+        </ResponsiveDialogTitle>
+        <ResponsiveDialogDescription>
+          {isEditing
+            ? 'Update the platform-specific variant details'
+            : 'Create a platform-specific variant of your prompt'}
+        </ResponsiveDialogDescription>
+      </ResponsiveDialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Platform Selection */}
-          <div className="space-y-2">
-            <Label htmlFor="platform">Platform *</Label>
-            <Select
-              value={formData.platform}
-              onValueChange={(value) => setFormData({ ...formData, platform: value })}
-              disabled={isEditing}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a platform" />
-              </SelectTrigger>
-              <SelectContent>
-                {PLATFORMS.map((platform) => (
-                  <SelectItem key={platform.id} value={platform.id}>
-                    <span className="flex items-center gap-2">
-                      <span>{platform.icon}</span>
-                      <span>{platform.name}</span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Model Version */}
-          <div className="space-y-2">
-            <Label htmlFor="modelVersion">Model Version</Label>
-            <Input
-              id="modelVersion"
-              value={formData.modelVersion}
-              onChange={(e) => setFormData({ ...formData, modelVersion: e.target.value })}
-              placeholder="e.g., v6.1, flux-1.1-pro, sdxl-turbo"
-            />
-            <p className="text-xs text-muted-foreground">
-              Specify the exact model version used (optional)
-            </p>
-          </div>
-
-          {/* Optimized Prompt */}
-          <div className="space-y-2">
-            <Label htmlFor="optimizedPrompt">Optimized Prompt *</Label>
-            <Textarea
-              id="optimizedPrompt"
-              value={formData.optimizedPrompt}
-              onChange={(e) => setFormData({ ...formData, optimizedPrompt: e.target.value })}
-              placeholder="Enter the platform-optimized prompt"
-              rows={4}
-              className="font-mono text-sm"
-            />
-          </div>
-
-          {/* Negative Prompt */}
-          <div className="space-y-2">
-            <Label htmlFor="negativePrompt">Negative Prompt</Label>
-            <Textarea
-              id="negativePrompt"
-              value={formData.negativePrompt}
-              onChange={(e) => setFormData({ ...formData, negativePrompt: e.target.value })}
-              placeholder="e.g., blurry, low quality, distorted"
-              rows={2}
-              className="font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              Things to avoid in the generated output
-            </p>
-          </div>
-
-          {/* Parameters */}
-          <div className="space-y-2">
-            <Label htmlFor="parameters">Parameters (JSON)</Label>
-            <Textarea
-              id="parameters"
-              value={formData.parameters}
-              onChange={(e) => setFormData({ ...formData, parameters: e.target.value })}
-              placeholder='e.g., {"ar": "16:9", "stylize": 500}'
-              rows={3}
-              className="font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              Platform-specific parameters in JSON format
-            </p>
-          </div>
-
-          {/* Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="notes">Notes</Label>
-            <Textarea
-              id="notes"
-              value={formData.notes}
-              onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-              placeholder="Any notes about this variant..."
-              rows={2}
-            />
-          </div>
-
-          {/* Result Image */}
-          <div className="space-y-2">
-            <Label>Result Image</Label>
-            <ImageUpload
-              value={formData.resultImageUrl}
-              onChange={(url) => setFormData({ ...formData, resultImageUrl: url })}
-              disabled={isSubmitting}
-            />
-            <p className="text-xs text-muted-foreground">
-              Upload the generated result image for this variant
-            </p>
-          </div>
+      <ResponsiveDialogBody className="space-y-4">
+        {/* Platform Selection */}
+        <div className="space-y-2">
+          <Label htmlFor="platform">Platform *</Label>
+          <Select
+            value={formData.platform}
+            onValueChange={(value) => setFormData({ ...formData, platform: value })}
+            disabled={isEditing}
+          >
+            <SelectTrigger className="h-12 md:h-10">
+              <SelectValue placeholder="Select a platform" />
+            </SelectTrigger>
+            <SelectContent>
+              {PLATFORMS.map((platform) => (
+                <SelectItem
+                  key={platform.id}
+                  value={platform.id}
+                  className="min-h-[44px] md:min-h-0"
+                >
+                  <span className="flex items-center gap-2">
+                    <span>{platform.icon}</span>
+                    <span>{platform.name}</span>
+                  </span>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSubmit} disabled={isSubmitting}>
-            {isSubmitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Variant'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {/* Model Version */}
+        <div className="space-y-2">
+          <Label htmlFor="modelVersion">Model Version</Label>
+          <Input
+            id="modelVersion"
+            value={formData.modelVersion}
+            onChange={(e) => setFormData({ ...formData, modelVersion: e.target.value })}
+            placeholder="e.g., v6.1, flux-1.1-pro, sdxl-turbo"
+            className="h-12 md:h-10"
+          />
+          <p className="text-xs text-muted-foreground">
+            Specify the exact model version used (optional)
+          </p>
+        </div>
+
+        {/* Optimized Prompt */}
+        <div className="space-y-2">
+          <Label htmlFor="optimizedPrompt">Optimized Prompt *</Label>
+          <Textarea
+            id="optimizedPrompt"
+            value={formData.optimizedPrompt}
+            onChange={(e) => setFormData({ ...formData, optimizedPrompt: e.target.value })}
+            placeholder="Enter the platform-optimized prompt"
+            rows={4}
+            className="font-mono text-sm min-h-[100px]"
+          />
+        </div>
+
+        {/* Negative Prompt */}
+        <div className="space-y-2">
+          <Label htmlFor="negativePrompt">Negative Prompt</Label>
+          <Textarea
+            id="negativePrompt"
+            value={formData.negativePrompt}
+            onChange={(e) => setFormData({ ...formData, negativePrompt: e.target.value })}
+            placeholder="e.g., blurry, low quality, distorted"
+            rows={2}
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Things to avoid in the generated output
+          </p>
+        </div>
+
+        {/* Parameters */}
+        <div className="space-y-2">
+          <Label htmlFor="parameters">Parameters (JSON)</Label>
+          <Textarea
+            id="parameters"
+            value={formData.parameters}
+            onChange={(e) => setFormData({ ...formData, parameters: e.target.value })}
+            placeholder='e.g., {"ar": "16:9", "stylize": 500}'
+            rows={3}
+            className="font-mono text-sm"
+          />
+          <p className="text-xs text-muted-foreground">
+            Platform-specific parameters in JSON format
+          </p>
+        </div>
+
+        {/* Notes */}
+        <div className="space-y-2">
+          <Label htmlFor="notes">Notes</Label>
+          <Textarea
+            id="notes"
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            placeholder="Any notes about this variant..."
+            rows={2}
+          />
+        </div>
+
+        {/* Result Image */}
+        <div className="space-y-2">
+          <Label>Result Image</Label>
+          <ImageUpload
+            value={formData.resultImageUrl}
+            onChange={(url) => setFormData({ ...formData, resultImageUrl: url })}
+            disabled={isSubmitting}
+          />
+          <p className="text-xs text-muted-foreground">
+            Upload the generated result image for this variant
+          </p>
+        </div>
+      </ResponsiveDialogBody>
+
+      <ResponsiveDialogFooter>
+        <Button
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          className="h-12 md:h-10 w-full md:w-auto"
+        >
+          Cancel
+        </Button>
+        <Button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className="h-12 md:h-10 w-full md:w-auto"
+        >
+          {isSubmitting ? 'Saving...' : isEditing ? 'Save Changes' : 'Create Variant'}
+        </Button>
+      </ResponsiveDialogFooter>
+    </ResponsiveDialog>
   );
 }

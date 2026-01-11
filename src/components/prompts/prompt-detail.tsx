@@ -190,12 +190,38 @@ export function PromptDetail({ prompt }: PromptDetailProps) {
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-3">
+      {/* Mobile floating action bar - above bottom nav */}
+      <div className="fixed bottom-20 left-4 right-4 z-40 md:hidden">
+        <div className="flex gap-2 rounded-xl border bg-card/95 p-3 shadow-lg backdrop-blur">
+          <Button onClick={handleCopy} className="h-12 flex-1 active:scale-95 transition-transform">
+            {copied ? (
+              <Check className="mr-2 h-5 w-5" />
+            ) : (
+              <Copy className="mr-2 h-5 w-5" />
+            )}
+            Copy Prompt
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleFavorite}
+            className="h-12 w-12 active:scale-95 transition-transform"
+          >
+            <Heart
+              className={cn(
+                'h-5 w-5 transition-all',
+                isFavorite && 'fill-accent text-accent scale-110'
+              )}
+            />
+          </Button>
+        </div>
+      </div>
+
+      <div className="grid gap-6 lg:grid-cols-3 pb-20 md:pb-0">
         {/* Main content */}
         <div className="lg:col-span-2 space-y-6">
           {/* Hero Image */}
           {heroImage && (
-            <div className="overflow-hidden rounded-lg bg-muted">
+            <div className="overflow-hidden rounded-lg bg-muted -mx-4 md:mx-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={heroImage}
@@ -207,9 +233,10 @@ export function PromptDetail({ prompt }: PromptDetailProps) {
 
           {/* Base Prompt */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between space-y-2 sm:space-y-0 pb-2">
               <CardTitle className="text-base font-medium">Base Prompt</CardTitle>
-              <div className="flex items-center gap-2">
+              {/* Desktop only actions */}
+              <div className="hidden md:flex items-center gap-2">
                 <Button
                   size="sm"
                   variant="ghost"
@@ -240,36 +267,52 @@ export function PromptDetail({ prompt }: PromptDetailProps) {
 
           {/* Variants */}
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <h2 className="text-lg font-semibold">Platform Variants</h2>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => setIsAIOptimizerOpen(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsAIOptimizerOpen(true)}
+                  className="h-10 md:h-8 flex-1 sm:flex-none"
+                >
                   <Wand2 className="mr-2 h-4 w-4" />
-                  AI Optimize
+                  <span className="hidden sm:inline">AI </span>Optimize
                 </Button>
-                <Button size="sm" onClick={openAddVariantDialog}>
+                <Button
+                  size="sm"
+                  onClick={openAddVariantDialog}
+                  className="h-10 md:h-8 flex-1 sm:flex-none"
+                >
                   <Plus className="mr-2 h-4 w-4" />
-                  Add Variant
+                  <span className="hidden sm:inline">Add </span>Variant
                 </Button>
               </div>
             </div>
 
             {platforms.length > 0 ? (
               <Tabs defaultValue={platforms[0]} className="w-full">
-                <TabsList className="w-full justify-start">
-                  {platforms.map((platformId) => {
-                    const platform = PLATFORMS.find((p) => p.id === platformId);
-                    return (
-                      <TabsTrigger key={platformId} value={platformId}>
-                        <span className="mr-2">{platform?.icon || '?'}</span>
-                        {platform?.name || platformId}
-                        <Badge variant="secondary" className="ml-2">
-                          {variantsByPlatform[platformId].length}
-                        </Badge>
-                      </TabsTrigger>
-                    );
-                  })}
-                </TabsList>
+                {/* Horizontal scroll on mobile */}
+                <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0 scrollbar-hide">
+                  <TabsList className="w-max md:w-full justify-start">
+                    {platforms.map((platformId) => {
+                      const platform = PLATFORMS.find((p) => p.id === platformId);
+                      return (
+                        <TabsTrigger
+                          key={platformId}
+                          value={platformId}
+                          className="min-h-[44px] md:min-h-0 shrink-0"
+                        >
+                          <span className="mr-2">{platform?.icon || '?'}</span>
+                          {platform?.name || platformId}
+                          <Badge variant="secondary" className="ml-2">
+                            {variantsByPlatform[platformId].length}
+                          </Badge>
+                        </TabsTrigger>
+                      );
+                    })}
+                  </TabsList>
+                </div>
 
                 {platforms.map((platformId) => (
                   <TabsContent key={platformId} value={platformId} className="mt-4">

@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Star, Copy, Check, MoreHorizontal, Heart, Archive, Trash2 } from 'lucide-react';
+import { Star, Copy, Check, MoreVertical, Heart, Archive, Trash2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -61,6 +61,7 @@ export function PromptCard({ prompt }: PromptCardProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [isFavorite, setIsFavorite] = useState(prompt.is_favorite);
+  const [isPressed, setIsPressed] = useState(false);
 
   // Get the best variant image or first available
   const bestVariant = prompt.variants?.find((v) => v.is_best);
@@ -101,8 +102,24 @@ export function PromptCard({ prompt }: PromptCardProps) {
   };
 
   return (
-    <div onClick={handleCardClick} className="cursor-pointer">
-      <Card className="group overflow-hidden transition-all hover:ring-2 hover:ring-primary/50">
+    <div
+      onClick={handleCardClick}
+      onTouchStart={() => setIsPressed(true)}
+      onTouchEnd={() => setIsPressed(false)}
+      onMouseDown={() => setIsPressed(true)}
+      onMouseUp={() => setIsPressed(false)}
+      onMouseLeave={() => setIsPressed(false)}
+      className="cursor-pointer"
+    >
+      <Card
+        className={cn(
+          'group overflow-hidden transition-all',
+          'hover:ring-2 hover:ring-primary/50',
+          // Mobile press effect
+          isPressed && 'scale-[0.98] shadow-sm',
+          !isPressed && 'scale-100'
+        )}
+      >
         {/* Image */}
         <div className="relative aspect-square overflow-hidden bg-muted">
           {thumbnailUrl ? (
@@ -118,8 +135,8 @@ export function PromptCard({ prompt }: PromptCardProps) {
             </div>
           )}
 
-          {/* Overlay on hover */}
-          <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100">
+          {/* Overlay on hover - hidden on mobile */}
+          <div className="absolute inset-0 hidden md:flex items-end bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100">
             <div className="w-full p-3">
               <p className="line-clamp-2 font-mono text-xs text-white/90">
                 {prompt.base_prompt}
@@ -127,25 +144,32 @@ export function PromptCard({ prompt }: PromptCardProps) {
             </div>
           </div>
 
-          {/* Quick actions */}
-          <div className="absolute right-2 top-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+          {/* Quick actions - always visible on mobile, hover on desktop */}
+          <div
+            className={cn(
+              'absolute right-2 top-2 flex gap-1 transition-opacity',
+              // Always visible on mobile, hover-only on desktop
+              'opacity-100 md:opacity-0 md:group-hover:opacity-100'
+            )}
+          >
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Button
                     size="icon"
                     variant="secondary"
-                    className="h-8 w-8"
+                    // Larger touch targets on mobile
+                    className="h-10 w-10 md:h-8 md:w-8 active:scale-95 transition-transform"
                     onClick={handleCopy}
                   >
                     {copied ? (
-                      <Check className="h-4 w-4" />
+                      <Check className="h-5 w-5 md:h-4 md:w-4" />
                     ) : (
-                      <Copy className="h-4 w-4" />
+                      <Copy className="h-5 w-5 md:h-4 md:w-4" />
                     )}
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Copy prompt</TooltipContent>
+                <TooltipContent className="hidden md:block">Copy prompt</TooltipContent>
               </Tooltip>
             </TooltipProvider>
 
@@ -155,18 +179,18 @@ export function PromptCard({ prompt }: PromptCardProps) {
                   <Button
                     size="icon"
                     variant="secondary"
-                    className="h-8 w-8"
+                    className="h-10 w-10 md:h-8 md:w-8 active:scale-95 transition-transform"
                     onClick={handleFavorite}
                   >
                     <Heart
                       className={cn(
-                        'h-4 w-4 transition-colors',
-                        isFavorite && 'fill-accent text-accent'
+                        'h-5 w-5 md:h-4 md:w-4 transition-all',
+                        isFavorite && 'fill-accent text-accent scale-110'
                       )}
                     />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>
+                <TooltipContent className="hidden md:block">
                   {isFavorite ? 'Remove from favorites' : 'Add to favorites'}
                 </TooltipContent>
               </Tooltip>
@@ -177,19 +201,19 @@ export function PromptCard({ prompt }: PromptCardProps) {
                 <Button
                   size="icon"
                   variant="secondary"
-                  className="h-8 w-8"
+                  className="h-10 w-10 md:h-8 md:w-8 active:scale-95 transition-transform"
                   onClick={(e) => e.preventDefault()}
                 >
-                  <MoreHorizontal className="h-4 w-4" />
+                  <MoreVertical className="h-5 w-5 md:h-4 md:w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>
+                <DropdownMenuItem className="min-h-[44px] md:min-h-0">
                   <Archive className="mr-2 h-4 w-4" />
                   Archive
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem className="text-destructive">
+                <DropdownMenuItem className="text-destructive min-h-[44px] md:min-h-0">
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>

@@ -272,7 +272,7 @@ export function PromptForm({ categories, initialData }: PromptFormProps) {
             <Textarea
               id="base_prompt"
               placeholder="Enter your base prompt... You can paste directly from Midjourney"
-              className="min-h-[150px] font-mono"
+              className="min-h-[120px] md:min-h-[150px] font-mono"
               {...register('base_prompt')}
             />
             {errors.base_prompt && (
@@ -440,20 +440,27 @@ export function PromptForm({ categories, initialData }: PromptFormProps) {
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex justify-end gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => router.back()}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {initialData ? 'Save Changes' : 'Create Prompt'}
-            </Button>
+          {/* Actions - Sticky footer on mobile */}
+          <div className="sticky bottom-0 -mx-6 mt-6 border-t border-border bg-card px-6 py-4 md:static md:mx-0 md:mt-0 md:border-0 md:bg-transparent md:px-0 md:py-0">
+            <div className="flex flex-col-reverse gap-3 md:flex-row md:justify-end">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => router.back()}
+                disabled={isSubmitting}
+                className="h-12 md:h-10 w-full md:w-auto"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="h-12 md:h-10 w-full md:w-auto"
+              >
+                {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {initialData ? 'Save Changes' : 'Create Prompt'}
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>

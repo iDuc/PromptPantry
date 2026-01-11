@@ -73,7 +73,7 @@ export function Sidebar({ categories }: SidebarProps) {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed left-0 top-0 z-30 flex h-screen w-64 flex-col border-r border-border bg-sidebar">
+    <aside className="fixed left-0 top-0 z-30 hidden md:flex h-screen w-64 flex-col border-r border-border bg-sidebar">
       {/* Logo */}
       <Link href="/" className="flex h-16 items-center gap-2 px-6 hover:opacity-80 transition-opacity">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">

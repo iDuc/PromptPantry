@@ -1,7 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import { Sidebar } from './sidebar';
 import { Header } from './header';
+import { MobileBottomNav } from './mobile-bottom-nav';
+import { MobileDrawer } from './mobile-drawer';
+import { MobileSearchModal } from './mobile-search-modal';
 
 interface Category {
   id: string;
@@ -17,13 +21,40 @@ interface AppLayoutProps {
 }
 
 export function AppLayout({ children, categories }: AppLayoutProps) {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+
   return (
     <div className="flex min-h-screen">
-      <Sidebar categories={categories} />
-      <div className="ml-64 flex flex-1 flex-col">
-        <Header />
-        <main className="flex-1 p-6">{children}</main>
+      {/* Desktop sidebar - hidden on mobile */}
+      <div className="hidden md:block">
+        <Sidebar categories={categories} />
       </div>
+
+      {/* Main content - responsive margin */}
+      <div className="flex flex-1 flex-col md:ml-64">
+        <Header />
+        {/* Extra bottom padding on mobile for bottom nav */}
+        <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{children}</main>
+      </div>
+
+      {/* Mobile bottom nav - hidden on desktop */}
+      <div className="md:hidden">
+        <MobileBottomNav
+          onSearchClick={() => setSearchOpen(true)}
+          onMenuClick={() => setDrawerOpen(true)}
+        />
+      </div>
+
+      {/* Mobile drawer - hidden on desktop */}
+      <MobileDrawer
+        categories={categories}
+        open={drawerOpen}
+        onOpenChange={setDrawerOpen}
+      />
+
+      {/* Mobile search modal */}
+      <MobileSearchModal open={searchOpen} onOpenChange={setSearchOpen} />
     </div>
   );
 }
