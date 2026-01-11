@@ -1,5 +1,13 @@
 # CLAUDE.md - PromptPantry Development Instructions
 
+## Important Documentation
+
+**Before starting work, read these files for context:**
+- **`FEATURES.md`** - Comprehensive documentation of all implemented features, database schema, API routes, authentication system, and known issues. This is the primary reference for understanding what has been built.
+- **`FUTURE_FEATURES.md`** - Ideas and planned features for future development.
+
+---
+
 ## Project Summary
 
 Build **PromptPantry**: A visually stunning prompt management app for AI image/video generation (Midjourney, Veo, Nano Banana Pro, etc.).
