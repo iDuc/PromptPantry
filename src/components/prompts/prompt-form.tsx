@@ -242,13 +242,13 @@ export function PromptForm({ categories, initialData }: PromptFormProps) {
             </label>
             <Select
               value={sourcePlatform || ''}
-              onValueChange={(value) => setValue('source_platform', value || undefined)}
+              onValueChange={(value) => setValue('source_platform', value === 'none' ? undefined : value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Where did this prompt come from?" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">None / Original</SelectItem>
+                <SelectItem value="none">None / Original</SelectItem>
                 {PLATFORMS.map((platform) => (
                   <SelectItem key={platform.id} value={platform.id}>
                     <span className="flex items-center gap-2">
