@@ -10,6 +10,7 @@ interface SSEMessage {
   choices?: string[];
   finalPrompt?: string | null;
   messageType?: string;
+  fullResponse?: string;
 }
 
 interface UseSSEOptions {
