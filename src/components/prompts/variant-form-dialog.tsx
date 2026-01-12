@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { usePlatforms } from '@/hooks/use-platforms';
-import { ImageUpload } from './image-upload';
+import { ImageUpload, UploadedImage } from './image-upload';
 
 interface VariantFormData {
   platform: string;
@@ -31,7 +31,7 @@ interface VariantFormData {
   negativePrompt: string;
   parameters: string;
   notes: string;
-  resultImageUrl: string | null;
+  resultImage: UploadedImage | null;
 }
 
 interface Variant {
@@ -76,7 +76,7 @@ export function VariantFormDialog({
     negativePrompt: '',
     parameters: '',
     notes: '',
-    resultImageUrl: null,
+    resultImage: null,
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -93,7 +93,12 @@ export function VariantFormDialog({
           ? JSON.stringify(editingVariant.parameters, null, 2)
           : '',
         notes: editingVariant?.notes || '',
-        resultImageUrl: editingVariant?.result_image_url || null,
+        resultImage: editingVariant?.result_image_url
+          ? {
+              url: editingVariant.result_image_url,
+              thumbnailUrl: editingVariant.result_thumbnail_url || null,
+            }
+          : null,
       });
     }
   }, [open, editingVariant, basePrompt]);
@@ -136,7 +141,8 @@ export function VariantFormDialog({
           parameters,
           notes: formData.notes || null,
           model_version: formData.modelVersion || null,
-          result_image_url: formData.resultImageUrl,
+          result_image_url: formData.resultImage?.url || null,
+          result_thumbnail_url: formData.resultImage?.thumbnailUrl || null,
         }),
       });
 
@@ -286,8 +292,8 @@ export function VariantFormDialog({
         <div className="space-y-2">
           <Label>Result Image</Label>
           <ImageUpload
-            value={formData.resultImageUrl}
-            onChange={(url) => setFormData({ ...formData, resultImageUrl: url })}
+            value={formData.resultImage}
+            onChange={(data) => setFormData({ ...formData, resultImage: data })}
             disabled={isSubmitting}
           />
           <p className="text-xs text-muted-foreground">

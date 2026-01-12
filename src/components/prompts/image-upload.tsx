@@ -6,16 +6,33 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
+export interface UploadedImage {
+  url: string;
+  thumbnailUrl: string | null;
+}
+
 interface ImageUploadProps {
-  value?: string | null;
-  onChange: (url: string | null) => void;
+  value?: UploadedImage | string | null;
+  onChange: (data: UploadedImage | null) => void;
   disabled?: boolean;
+}
+
+// Helper to normalize value to UploadedImage format
+function normalizeValue(value: UploadedImage | string | null | undefined): UploadedImage | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    return { url: value, thumbnailUrl: null };
+  }
+  return value;
 }
 
 export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Normalize value for display
+  const normalizedValue = normalizeValue(value);
 
   const handleUpload = useCallback(async (file: File) => {
     if (disabled) return;
@@ -27,9 +44,9 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
       return;
     }
 
-    // Validate file size (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('File too large. Maximum size is 10MB.');
+    // Validate file size (20MB - increased since we compress on server)
+    if (file.size > 20 * 1024 * 1024) {
+      toast.error('File too large. Maximum size is 20MB.');
       return;
     }
 
@@ -50,8 +67,18 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
       }
 
       const data = await response.json();
-      onChange(data.url);
-      toast.success('Image uploaded successfully');
+
+      // Show compression stats if available
+      if (data.compression) {
+        toast.success(`Image optimized! Saved ${data.compression.savings}`);
+      } else {
+        toast.success('Image uploaded successfully');
+      }
+
+      onChange({
+        url: data.url,
+        thumbnailUrl: data.thumbnailUrl || null,
+      });
     } catch (error) {
       console.error('Upload error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to upload image');
@@ -61,10 +88,10 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
   }, [disabled, onChange]);
 
   const handleRemove = useCallback(async () => {
-    if (!value || disabled) return;
+    if (!normalizedValue?.url || disabled) return;
 
     try {
-      await fetch(`/api/upload?url=${encodeURIComponent(value)}`, {
+      await fetch(`/api/upload?url=${encodeURIComponent(normalizedValue.url)}`, {
         method: 'DELETE',
       });
       onChange(null);
@@ -72,7 +99,7 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
     } catch {
       toast.error('Failed to remove image');
     }
-  }, [value, disabled, onChange]);
+  }, [normalizedValue, disabled, onChange]);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -119,12 +146,12 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
   }, [disabled]);
 
   // Show uploaded image
-  if (value) {
+  if (normalizedValue?.url) {
     return (
       <div className="relative rounded-lg border overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src={value}
+          src={normalizedValue.url}
           alt="Uploaded result"
           className="w-full h-48 object-cover"
         />
@@ -170,7 +197,7 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
       {isUploading ? (
         <>
           <Loader2 className="h-10 w-10 text-muted-foreground animate-spin" />
-          <p className="mt-2 text-sm text-muted-foreground">Uploading...</p>
+          <p className="mt-2 text-sm text-muted-foreground">Optimizing...</p>
         </>
       ) : (
         <>
@@ -185,7 +212,7 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
             {isDragging ? 'Drop image here' : 'Click or drag to upload'}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            JPEG, PNG, WebP, GIF up to 10MB
+            JPEG, PNG, WebP, GIF up to 20MB
           </p>
         </>
       )}
