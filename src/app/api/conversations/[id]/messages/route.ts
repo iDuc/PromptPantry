@@ -138,11 +138,16 @@ export async function POST(
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+          const model = genAI.getGenerativeModel({
+            model: 'gemini-2.0-flash',
+            systemInstruction: {
+              role: 'user',
+              parts: [{ text: GENERATOR_SYSTEM_PROMPT }],
+            },
+          });
 
           const chat = model.startChat({
             history: chatHistory.slice(0, -1), // Exclude the latest user message
-            systemInstruction: GENERATOR_SYSTEM_PROMPT,
           });
 
           const result = await chat.sendMessageStream(content);

@@ -71,18 +71,10 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
         const decoder = new TextDecoder();
         let buffer = '';
 
-        while (true) {
-          const { done, value } = await reader.read();
-
-          if (done) {
-            break;
-          }
-
-          buffer += decoder.decode(value, { stream: true });
-
-          // Process complete SSE messages
-          const lines = buffer.split('\n\n');
-          buffer = lines.pop() || ''; // Keep incomplete message in buffer
+        // Helper function to process SSE messages from buffer
+        const processBuffer = (text: string): string => {
+          const lines = text.split('\n\n');
+          const remaining = lines.pop() || ''; // Keep incomplete message in buffer
 
           for (const line of lines) {
             if (line.startsWith('data: ')) {
@@ -109,6 +101,25 @@ export function useSSE(options: UseSSEOptions = {}): UseSSEReturn {
               }
             }
           }
+
+          return remaining;
+        };
+
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done) {
+            // Flush any remaining bytes from the decoder
+            buffer += decoder.decode(new Uint8Array(), { stream: false });
+            // Process any remaining buffer content
+            if (buffer.trim()) {
+              processBuffer(buffer + '\n\n'); // Add delimiter to ensure last message is processed
+            }
+            break;
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          buffer = processBuffer(buffer);
         }
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
