@@ -6,6 +6,7 @@ import { Header } from './header';
 import { MobileBottomNav } from './mobile-bottom-nav';
 import { MobileDrawer } from './mobile-drawer';
 import { MobileSearchModal } from './mobile-search-modal';
+import { WelcomeModal } from '@/components/onboarding/welcome-modal';
 
 interface Category {
   id: string;
@@ -62,6 +63,9 @@ export function AppLayout({ children, categories, tags = [] }: AppLayoutProps) {
 
       {/* Mobile search modal */}
       <MobileSearchModal open={searchOpen} onOpenChange={setSearchOpen} />
+
+      {/* Welcome modal for first-time users */}
+      <WelcomeModal />
     </div>
   );
 }

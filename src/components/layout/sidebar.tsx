@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { motion } from 'framer-motion';
 import {
   Palette,
   Sun,
@@ -34,6 +35,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { PromptGeneratorModal } from '@/components/generator';
+import { springTransition } from '@/lib/motion';
 
 // Map icon names to Lucide components - must match settings page iconMap
 const iconMap: Record<string, LucideIcon> = {
@@ -85,13 +87,20 @@ export function Sidebar({ categories, tags = [] }: SidebarProps) {
 
   return (
     <>
-      <aside className="fixed left-0 top-0 z-30 hidden md:flex h-screen w-64 flex-col border-r border-border bg-sidebar">
-        {/* Logo */}
-        <Link href="/" className="flex h-16 items-center gap-2 px-6 hover:opacity-80 transition-opacity">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
-            <Sparkles className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="text-lg font-semibold">PromptPantry</span>
+      <aside className="fixed left-0 top-0 z-30 hidden md:flex h-screen w-64 flex-col border-r border-border/50 bg-gradient-to-b from-sidebar via-sidebar to-sidebar/95 backdrop-blur-sm">
+        {/* Logo with hover glow */}
+        <Link href="/" className="group flex h-16 items-center gap-3 px-6">
+          <motion.div
+            className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary shadow-lg"
+            whileHover={{
+              scale: 1.05,
+              boxShadow: '0 8px 30px rgba(129, 140, 248, 0.4)',
+            }}
+            transition={springTransition}
+          >
+            <Sparkles className="h-5 w-5 text-primary-foreground" />
+          </motion.div>
+          <span className="text-lg font-display font-semibold">PromptPantry</span>
         </Link>
 
         {/* Action Buttons */}
@@ -119,19 +128,25 @@ export function Sidebar({ categories, tags = [] }: SidebarProps) {
           {mainNav.map((item) => {
             const isActive = pathname === item.href;
             return (
-              <Link
+              <motion.div
                 key={item.href}
-                href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                )}
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.98 }}
+                transition={springTransition}
               >
-                <item.icon className="h-4 w-4" />
-                {item.label}
-              </Link>
+                <Link
+                  href={item.href}
+                  className={cn(
+                    'flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                  )}
+                >
+                  <item.icon className="h-4 w-4" />
+                  {item.label}
+                </Link>
+              </motion.div>
             );
           })}
         </nav>
@@ -140,13 +155,13 @@ export function Sidebar({ categories, tags = [] }: SidebarProps) {
 
         {/* Categories */}
         <div className="space-y-1">
-          <div className="flex items-center justify-between px-3 py-2">
+          <div className="flex items-center justify-between px-4 py-2">
             <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Categories
             </span>
             <Link
               href="/settings#categories"
-              className="text-muted-foreground hover:text-foreground"
+              className="text-muted-foreground hover:text-foreground transition-colors"
             >
               <Settings className="h-3.5 w-3.5" />
             </Link>
@@ -155,22 +170,28 @@ export function Sidebar({ categories, tags = [] }: SidebarProps) {
             const Icon = category.icon ? iconMap[category.icon] : FolderOpen;
             const isActive = pathname === `/category/${category.slug}`;
             return (
-              <Link
+              <motion.div
                 key={category.id}
-                href={`/category/${category.slug}`}
-                className={cn(
-                  'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                    : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-                )}
+                whileHover={{ x: 2 }}
+                whileTap={{ scale: 0.98 }}
+                transition={springTransition}
               >
-                <Icon
-                  className="h-4 w-4"
-                  style={{ color: category.color || undefined }}
-                />
-                {category.name}
-              </Link>
+                <Link
+                  href={`/category/${category.slug}`}
+                  className={cn(
+                    'flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors',
+                    isActive
+                      ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+                      : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+                  )}
+                >
+                  <Icon
+                    className="h-4 w-4"
+                    style={{ color: category.color || undefined }}
+                  />
+                  {category.name}
+                </Link>
+              </motion.div>
             );
           })}
         </div>
@@ -180,29 +201,35 @@ export function Sidebar({ categories, tags = [] }: SidebarProps) {
           <>
             <Separator className="my-4" />
             <div className="space-y-1">
-              <div className="flex items-center justify-between px-3 py-2">
+              <div className="flex items-center justify-between px-4 py-2">
                 <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                   Popular Tags
                 </span>
                 <Link
                   href="/tags"
-                  className="text-xs text-muted-foreground hover:text-foreground"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   See all
                 </Link>
               </div>
               {tags.map((tag) => (
-                <Link
+                <motion.div
                   key={tag.name}
-                  href={`/?tags=${encodeURIComponent(tag.name)}`}
-                  className="flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  whileHover={{ x: 2 }}
+                  whileTap={{ scale: 0.98 }}
+                  transition={springTransition}
                 >
-                  <div className="flex items-center gap-3">
-                    <Tag className="h-4 w-4" />
-                    <span className="truncate">{tag.name}</span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">{tag.count}</span>
-                </Link>
+                  <Link
+                    href={`/?tags=${encodeURIComponent(tag.name)}`}
+                    className="flex items-center justify-between rounded-xl px-4 py-2.5 text-sm font-medium transition-colors text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                  >
+                    <div className="flex items-center gap-3">
+                      <Tag className="h-4 w-4" />
+                      <span className="truncate">{tag.name}</span>
+                    </div>
+                    <span className="text-xs text-muted-foreground">{tag.count}</span>
+                  </Link>
+                </motion.div>
               ))}
             </div>
           </>
@@ -211,19 +238,25 @@ export function Sidebar({ categories, tags = [] }: SidebarProps) {
       </div>
 
         {/* Bottom section */}
-        <div className="border-t border-border p-4">
-          <Link
-            href="/settings"
-            className={cn(
-              'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-              pathname === '/settings'
-                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
-            )}
+        <div className="border-t border-border/50 p-4">
+          <motion.div
+            whileHover={{ x: 2 }}
+            whileTap={{ scale: 0.98 }}
+            transition={springTransition}
           >
-            <Settings className="h-4 w-4" />
-            Settings
-          </Link>
+            <Link
+              href="/settings"
+              className={cn(
+                'flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors',
+                pathname === '/settings'
+                  ? 'bg-sidebar-accent text-sidebar-accent-foreground shadow-sm'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground'
+              )}
+            >
+              <Settings className="h-4 w-4" />
+              Settings
+            </Link>
+          </motion.div>
         </div>
       </aside>
 

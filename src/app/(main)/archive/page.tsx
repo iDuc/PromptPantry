@@ -22,7 +22,7 @@ export default async function ArchivePage() {
           Archived prompts you no longer actively use
         </p>
       </div>
-      <PromptGrid prompts={prompts || []} />
+      <PromptGrid prompts={prompts || []} emptyVariant="archive" />
     </div>
   );
 }

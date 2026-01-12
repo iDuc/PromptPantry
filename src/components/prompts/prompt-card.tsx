@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { Star, Copy, Check, MoreVertical, Heart, Archive, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Star, Copy, Check, MoreVertical, Heart, Archive, Trash2, Sparkles } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -32,6 +33,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { springTransition, quickTransition } from '@/lib/motion';
 
 interface Category {
   id: string;
@@ -71,7 +73,7 @@ export function PromptCard({ prompt }: PromptCardProps) {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
   const [isFavorite, setIsFavorite] = useState(prompt.is_favorite);
-  const [isPressed, setIsPressed] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -148,55 +150,75 @@ export function PromptCard({ prompt }: PromptCardProps) {
   };
 
   return (
-    <div
+    <motion.div
       onClick={handleCardClick}
-      onTouchStart={() => setIsPressed(true)}
-      onTouchEnd={() => setIsPressed(false)}
-      onMouseDown={() => setIsPressed(true)}
-      onMouseUp={() => setIsPressed(false)}
-      onMouseLeave={() => setIsPressed(false)}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      whileHover={{ y: -4 }}
+      whileTap={{ scale: 0.98 }}
+      transition={springTransition}
       className="cursor-pointer"
     >
       <Card
         className={cn(
-          'group overflow-hidden transition-all',
-          'hover:ring-2 hover:ring-primary/50',
-          // Mobile press effect
-          isPressed && 'scale-[0.98] shadow-sm',
-          !isPressed && 'scale-100'
+          'group overflow-hidden',
+          'ring-1 ring-border/50 transition-shadow',
+          isHovered && 'ring-2 ring-primary/50 shadow-lg'
         )}
       >
         {/* Image */}
         <div className="relative aspect-square overflow-hidden bg-muted">
           {thumbnailUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={thumbnailUrl}
-              alt={prompt.title}
-              className="h-full w-full object-cover transition-transform group-hover:scale-105"
-            />
+            <motion.div
+              className="h-full w-full"
+              animate={{ scale: isHovered ? 1.05 : 1 }}
+              transition={{ duration: 0.4, ease: 'easeOut' }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={thumbnailUrl}
+                alt={prompt.title}
+                className="h-full w-full object-cover"
+              />
+            </motion.div>
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-              <span className="font-mono text-4xl text-muted-foreground/30">?</span>
+            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/5 via-transparent to-accent/5">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full border border-border/50 bg-muted/50">
+                <Sparkles className="h-6 w-6 text-muted-foreground/50" />
+              </div>
             </div>
           )}
 
-          {/* Overlay on hover - hidden on mobile */}
-          <div className="absolute inset-0 hidden md:flex items-end bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 transition-opacity group-hover:opacity-100">
-            <div className="w-full p-3">
-              <p className="line-clamp-2 font-mono text-xs text-white/90">
-                {prompt.base_prompt}
-              </p>
-            </div>
-          </div>
+          {/* Gradient overlay that intensifies on hover */}
+          <motion.div
+            className="absolute inset-0 hidden md:flex items-end bg-gradient-to-t from-black/70 via-transparent to-transparent pointer-events-none"
+            initial={{ opacity: 0.3 }}
+            animate={{ opacity: isHovered ? 0.9 : 0.3 }}
+            transition={quickTransition}
+          />
 
-          {/* Quick actions - always visible on mobile, hover on desktop */}
-          <div
-            className={cn(
-              'absolute right-2 top-2 flex gap-1 transition-opacity',
-              // Always visible on mobile, hover-only on desktop
-              'opacity-100 md:opacity-0 md:group-hover:opacity-100'
-            )}
+          {/* Prompt preview slides up on hover */}
+          <motion.div
+            className="absolute bottom-0 inset-x-0 p-4 hidden md:block"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{
+              opacity: isHovered ? 1 : 0,
+              y: isHovered ? 0 : 10,
+            }}
+            transition={quickTransition}
+          >
+            <p className="line-clamp-2 font-mono text-xs text-white/90">
+              {prompt.base_prompt}
+            </p>
+          </motion.div>
+
+          {/* Quick actions - always visible on mobile, stagger in on desktop hover */}
+          <motion.div
+            className="absolute right-2 top-2 flex gap-1.5"
+            initial={{ opacity: 1 }}
+            animate={{
+              opacity: 1,
+            }}
           >
             <TooltipProvider>
               <Tooltip>
@@ -228,12 +250,17 @@ export function PromptCard({ prompt }: PromptCardProps) {
                     className="h-10 w-10 md:h-8 md:w-8 active:scale-95 transition-transform"
                     onClick={handleFavorite}
                   >
-                    <Heart
-                      className={cn(
-                        'h-5 w-5 md:h-4 md:w-4 transition-all',
-                        isFavorite && 'fill-accent text-accent scale-110'
-                      )}
-                    />
+                    <motion.div
+                      animate={isFavorite ? { scale: [1, 1.3, 1] } : { scale: 1 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <Heart
+                        className={cn(
+                          'h-5 w-5 md:h-4 md:w-4 transition-colors',
+                          isFavorite && 'fill-accent text-accent'
+                        )}
+                      />
+                    </motion.div>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent className="hidden md:block">
@@ -275,12 +302,15 @@ export function PromptCard({ prompt }: PromptCardProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-          </div>
+          </motion.div>
 
-          {/* Rating badge */}
+          {/* Rating badge with glow */}
           {avgRating && (
-            <div className="absolute bottom-2 left-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-1 text-xs text-white">
-              <Star className="h-3 w-3 fill-accent text-accent" />
+            <div
+              className="absolute bottom-2 left-2 flex items-center gap-1.5 rounded-full bg-black/60 px-2.5 py-1 text-xs font-medium text-white backdrop-blur-sm"
+              style={{ boxShadow: '0 0 12px rgba(251, 191, 36, 0.3)' }}
+            >
+              <Star className="h-3.5 w-3.5 fill-accent text-accent" />
               {avgRating}
             </div>
           )}
@@ -328,9 +358,9 @@ export function PromptCard({ prompt }: PromptCardProps) {
 
           {/* Variants indicator */}
           {prompt.variants?.length > 0 && (
-            <div className="mt-2 flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
               <span>{prompt.variants.length} variant{prompt.variants.length !== 1 ? 's' : ''}</span>
-              <span className="text-muted-foreground/50">|</span>
+              <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
               <span>Used {prompt.use_count}x</span>
             </div>
           )}
@@ -358,6 +388,6 @@ export function PromptCard({ prompt }: PromptCardProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </motion.div>
   );
 }

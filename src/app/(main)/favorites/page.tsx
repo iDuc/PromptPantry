@@ -23,7 +23,7 @@ export default async function FavoritesPage() {
           Your favorite prompts for quick access
         </p>
       </div>
-      <PromptGrid prompts={prompts || []} />
+      <PromptGrid prompts={prompts || []} emptyVariant="favorites" />
     </div>
   );
 }

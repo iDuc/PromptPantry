@@ -6,8 +6,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-inter);
-  --font-mono: var(--font-jetbrains);
+  /* Typography - using new distinctive fonts */
+  --font-sans: var(--font-dm-sans, system-ui, sans-serif);
+  --font-display: var(--font-space-grotesk, system-ui, sans-serif);
+  --font-mono: var(--font-jetbrains-mono, monospace);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -80,6 +82,14 @@
   --sidebar-accent-foreground: #18181B;
   --sidebar-border: #E4E4E7;
   --sidebar-ring: #818CF8;
+
+  /* Premium shadow system */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.16);
+  --shadow-primary: 0 8px 30px rgba(129, 140, 248, 0.15);
+  --shadow-accent: 0 8px 30px rgba(251, 191, 36, 0.15);
 }
 
 /* Dark mode (default) */
@@ -115,6 +125,14 @@
   --sidebar-accent-foreground: #FAFAFA;
   --sidebar-border: #27272A;
   --sidebar-ring: #818CF8;
+
+  /* Premium shadow system - stronger for dark mode */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.3);
+  --shadow-xl: 0 24px 48px rgba(0, 0, 0, 0.35);
+  --shadow-primary: 0 8px 30px rgba(129, 140, 248, 0.2);
+  --shadow-accent: 0 8px 30px rgba(251, 191, 36, 0.2);
 }
 
 @layer base {
@@ -123,6 +141,23 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+
+  /* Display font for headings */
+  h1, h2, h3, .font-display {
+    font-family: var(--font-display);
+  }
+
+  h1 {
+    @apply text-3xl md:text-4xl font-bold tracking-tight;
+  }
+
+  h2 {
+    @apply text-2xl md:text-3xl font-semibold tracking-tight;
+  }
+
+  h3 {
+    @apply text-xl font-semibold;
   }
 }
 
@@ -180,4 +215,48 @@
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  /* Touch feedback - haptic-style visual feedback */
+  .touch-feedback {
+    @apply transition-transform duration-100 active:scale-95;
+  }
+}
+
+/* Premium card styling with glass effect */
+.card-elevated {
+  position: relative;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.card-elevated::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.1) 0%,
+    transparent 50%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.card-elevated:hover {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Focus ring with primary color glow */
+.focus-ring-primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--background), 0 0 0 4px var(--primary), var(--shadow-primary);
 }
