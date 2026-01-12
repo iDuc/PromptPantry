@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Home, Star, Plus, Search, Menu } from 'lucide-react';
@@ -29,9 +29,20 @@ export function MobileBottomNav({
   const pathname = usePathname();
   const scrollDirection = useScrollDirection({ threshold: 10 });
   const [fabPressed, setFabPressed] = useState(false);
+  const [isAtTop, setIsAtTop] = useState(true);
 
-  // Hide FAB when scrolling down
-  const hideFab = scrollDirection === 'down';
+  // Track if user is at top of page
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsAtTop(window.scrollY <= 10);
+    };
+    handleScroll(); // Check initial position
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Show FAB when at top OR when scrolling up
+  const hideFab = !isAtTop && scrollDirection === 'down';
 
   return (
     <nav

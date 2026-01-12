@@ -95,7 +95,7 @@ export function Sidebar({ categories, tags = [] }: SidebarProps) {
         </Link>
 
         {/* Action Buttons */}
-        <div className="px-4 pb-4 space-y-2">
+        <div className="px-4 pt-2 pb-4 space-y-2">
           <Button asChild className="w-full gap-2">
             <Link href="/prompts/new">
               <Plus className="h-4 w-4" />
@@ -112,7 +112,8 @@ export function Sidebar({ categories, tags = [] }: SidebarProps) {
           </Button>
         </div>
 
-      <ScrollArea className="flex-1 px-4">
+      <div className="flex-1 min-h-0">
+      <ScrollArea className="h-full px-4">
         {/* Main Navigation */}
         <nav className="space-y-1">
           {mainNav.map((item) => {
@@ -207,6 +208,7 @@ export function Sidebar({ categories, tags = [] }: SidebarProps) {
           </>
         )}
       </ScrollArea>
+      </div>
 
         {/* Bottom section */}
         <div className="border-t border-border p-4">
