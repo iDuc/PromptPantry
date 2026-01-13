@@ -147,8 +147,14 @@ export async function POST(
     );
 
     // Build chat history for Gemini
-    const chatHistory = history.map((msg) => ({
-      role: msg.role === 'user' ? 'user' : 'model',
+    // Filter to ensure first message is from user (Gemini requirement)
+    let filteredHistory = history;
+    if (history.length > 0 && history[0].role === 'assistant') {
+      filteredHistory = history.slice(1);
+    }
+
+    const chatHistory = filteredHistory.map((msg) => ({
+      role: msg.role === 'user' ? 'user' as const : 'model' as const,
       parts: [{ text: msg.content }],
     }));
 
