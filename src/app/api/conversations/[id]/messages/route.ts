@@ -63,11 +63,30 @@ export async function GET(
   }
 }
 
+// Timeout for Gemini API calls (30 seconds)
+const GEMINI_TIMEOUT_MS = 30000;
+
+// Helper to add timeout to a promise
+function withTimeout<T>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error(errorMessage)), ms)
+    ),
+  ]);
+}
+
 // POST /api/conversations/[id]/messages - Send a message and stream AI response
 export async function POST(
   request: NextRequest,
   context: RouteContext
 ) {
+  // Track if the request was aborted
+  let isAborted = false;
+  request.signal.addEventListener('abort', () => {
+    isAborted = true;
+  });
+
   try {
     const { id } = await context.params;
 
@@ -133,11 +152,17 @@ export async function POST(
       parts: [{ text: msg.content }],
     }));
 
-    // Create streaming response
+    // Create streaming response with abort handling
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          // Check if already aborted before starting
+          if (isAborted) {
+            controller.close();
+            return;
+          }
+
           const model = genAI.getGenerativeModel({
             model: 'gemini-2.0-flash',
             systemInstruction: {
@@ -150,16 +175,35 @@ export async function POST(
             history: chatHistory.slice(0, -1), // Exclude the latest user message
           });
 
-          const result = await chat.sendMessageStream(content);
+          // Add timeout to the Gemini API call
+          const result = await withTimeout(
+            chat.sendMessageStream(content),
+            GEMINI_TIMEOUT_MS,
+            'Gemini API request timed out'
+          );
+
           let fullResponse = '';
 
           for await (const chunk of result.stream) {
+            // Check if client disconnected
+            if (isAborted) {
+              console.log('Client disconnected, stopping stream');
+              controller.close();
+              return;
+            }
+
             const text = chunk.text();
             fullResponse += text;
 
             // Send chunk to client
             const data = JSON.stringify({ text, done: false });
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
+          }
+
+          // Check again before saving to database
+          if (isAborted) {
+            controller.close();
+            return;
           }
 
           // Parse the full response for choices and final prompt
@@ -218,13 +262,21 @@ export async function POST(
           controller.close();
         } catch (error) {
           console.error('Streaming error:', error);
-          const errorData = JSON.stringify({
-            error: 'Failed to generate response',
-            done: true,
-          });
-          controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
+          // Only send error if not aborted
+          if (!isAborted) {
+            const errorData = JSON.stringify({
+              error: error instanceof Error ? error.message : 'Failed to generate response',
+              done: true,
+            });
+            controller.enqueue(encoder.encode(`data: ${errorData}\n\n`));
+          }
           controller.close();
         }
+      },
+      cancel() {
+        // Called when the client disconnects
+        isAborted = true;
+        console.log('Stream cancelled by client');
       },
     });
 
