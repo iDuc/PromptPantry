@@ -6,6 +6,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogClose,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,7 +15,7 @@ import { ChatInterface } from './chat-interface';
 import { useConversation } from '@/hooks/use-conversation';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { Sparkles, Loader2 } from 'lucide-react';
+import { Sparkles, Loader2, X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface PromptGeneratorModalProps {
@@ -104,18 +105,23 @@ export function PromptGeneratorModal({
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent
+          showCloseButton={false}
           className={cn(
             'max-w-2xl h-[85vh] max-h-[700px]',
             'p-0 gap-0 flex flex-col',
-            'sm:rounded-xl overflow-hidden'
+            'sm:rounded-xl'
           )}
         >
-          {/* Header */}
-          <DialogHeader className="px-6 py-4 border-b border-border/50 shrink-0">
-            <DialogTitle className="flex items-center gap-2 text-lg">
+          {/* Header with close button */}
+          <DialogHeader className="px-6 py-4 border-b border-border/50 shrink-0 relative">
+            <DialogTitle className="flex items-center gap-2 text-lg pr-8">
               <Sparkles className="w-5 h-5 text-primary" />
               Prompt Generator
             </DialogTitle>
+            <DialogClose className="absolute right-4 top-1/2 -translate-y-1/2 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none">
+              <X className="h-5 w-5" />
+              <span className="sr-only">Close</span>
+            </DialogClose>
           </DialogHeader>
 
           {/* Chat Interface */}

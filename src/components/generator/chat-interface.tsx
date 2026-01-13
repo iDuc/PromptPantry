@@ -53,9 +53,9 @@ export function ChatInterface({
   const showStarterCards = showStarters && messages.length <= 1;
 
   return (
-    <div className={cn('flex flex-col h-full', className)}>
+    <div className={cn('flex flex-col h-full overflow-hidden', className)}>
       {/* Messages Area */}
-      <ScrollArea ref={scrollRef} className="flex-1 px-2">
+      <ScrollArea ref={scrollRef} className="flex-1 min-h-0 px-2">
         <div className="space-y-2 py-4">
           {/* Starter Cards - shown at beginning */}
           {showStarterCards && (
