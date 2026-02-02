@@ -52,9 +52,13 @@ test.describe('Authentication Flow', () => {
       const emailInput = page.locator('input[type="email"], input[name="email"]');
       await expect(emailInput).toBeVisible();
       
-      // Check for password input
-      const passwordInput = page.locator('input[type="password"], input[name="password"]');
+      // Check for password input (signup has password + confirm password, use first())
+      const passwordInput = page.locator('input[type="password"], input[name="password"]').first();
       await expect(passwordInput).toBeVisible();
+      
+      // Check for confirm password input
+      const confirmPasswordInput = page.locator('input#confirmPassword, input[name="confirmPassword"]');
+      await expect(confirmPasswordInput).toBeVisible();
       
       // Check for submit button
       const submitButton = page.locator('button[type="submit"]');
