@@ -53,6 +53,7 @@ export function WelcomeModal() {
 
   // SSR-safe: Only access localStorage after mounting
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- SSR hydration pattern
     setMounted(true);
     const hasOnboarded = localStorage.getItem(ONBOARDING_KEY);
     if (!hasOnboarded) {
