@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type'); // 'image' | 'video' | null
     const activeOnly = searchParams.get('active') !== 'false'; // default true
 
-    let conditions = [];
+    const conditions = [];
 
     if (activeOnly) {
       conditions.push(eq(platforms.isActive, true));

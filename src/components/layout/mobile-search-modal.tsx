@@ -23,21 +23,20 @@ export function MobileSearchModal({
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [searchValue, setSearchValue] = useState('');
-  const [recentSearches, setRecentSearches] = useState<string[]>([]);
-
-  // Load recent searches from localStorage
-  useEffect(() => {
+  const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+    // Use lazy initial state to load from localStorage
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
       if (stored) {
         try {
-          setRecentSearches(JSON.parse(stored));
+          return JSON.parse(stored);
         } catch {
-          // Invalid JSON, ignore
+          return [];
         }
       }
     }
-  }, []);
+    return [];
+  });
 
   // Auto-focus input when modal opens
   useEffect(() => {
