@@ -17,6 +17,8 @@ jobs:
     name: Playwright E2E Tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    # Skip if Supabase secrets aren't configured
+    if: ${{ vars.ENABLE_E2E_TESTS == 'true' || github.event_name == 'workflow_dispatch' }}
 
     steps:
       - name: Checkout repository
@@ -62,3 +64,16 @@ jobs:
           name: test-results
           path: test-results/
           retention-days: 7
+
+  # Placeholder job that always succeeds when E2E is skipped
+  e2e-skipped:
+    name: E2E Tests (Skipped)
+    runs-on: ubuntu-latest
+    if: ${{ vars.ENABLE_E2E_TESTS != 'true' && github.event_name != 'workflow_dispatch' }}
+    steps:
+      - name: E2E tests skipped
+        run: |
+          echo "E2E tests are skipped because ENABLE_E2E_TESTS variable is not set to 'true'"
+          echo "To enable E2E tests:"
+          echo "1. Add repository variable ENABLE_E2E_TESTS = true"
+          echo "2. Add secrets: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY"
