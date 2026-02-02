@@ -293,3 +293,38 @@ NEXT_PUBLIC_APP_URL=http://localhost:3000  # Production: https://promptpantry.nl
 - Drizzle: https://orm.drizzle.team
 - Supabase: https://supabase.com/docs
 - Gemini: https://ai.google.dev/docs
+
+---
+
+## Development Workflow
+
+### Planning & Verification
+- Enter plan mode for ANY non-trivial task (3+ steps or architectural decisions)
+- If something goes sideways, STOP and re-plan immediately - don't keep pushing
+- Write detailed specs upfront to reduce ambiguity
+- Never mark a task complete without proving it works
+- Run tests, check logs, demonstrate correctness
+- Ask yourself: "Would a staff engineer approve this?"
+
+### Quality Standards
+- **Simplicity First**: Make every change as simple as possible. Impact minimal code.
+- **No Laziness**: Find root causes. No temporary fixes. Senior developer standards.
+- **Minimal Impact**: Changes should only touch what's necessary. Avoid introducing bugs.
+- For non-trivial changes: pause and ask "is there a more elegant way?"
+- If a fix feels hacky: "Knowing everything I know now, implement the elegant solution"
+
+### Self-Improvement Loop
+- After ANY correction from the user: update `tasks/lessons.md` with the pattern
+- Write rules for yourself that prevent the same mistake
+- Review lessons at session start for relevant project
+
+### Autonomous Problem Solving
+- When given a bug report: just fix it. Don't ask for hand-holding
+- Point at logs, errors, failing tests - then resolve them
+- Go fix failing CI tests without being told how
+
+### Task Management
+1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
+2. **Track Progress**: Mark items complete as you go
+3. **Document Results**: Add review section when done
+4. **Capture Lessons**: Update `tasks/lessons.md` after corrections
